@@ -58,15 +58,17 @@ def order_points(points):
 
     return ordered
 
-# 4️⃣ Enregistrer le polygone fermé dans un fichier DXF
+# 4️⃣ Enregistrer le polygone fermé dans un fichier DXF avec un effet miroir de bas en haut
 def save_polygon_to_dxf(points, output_path):
-    """Crée un fichier DXF avec un polygone fermé à partir des points traités."""
+    """Crée un fichier DXF avec un polygone fermé à partir des points traités avec un effet miroir de bas en haut."""
     doc = ezdxf.new()
     msp = doc.modelspace()
     
     if points:
-        points.append(points[0])  # Fermer le polygone
-        msp.add_lwpolyline(points, close=True)  # Ajouter un polygone fermé
+        # Appliquer l'effet miroir de bas en haut
+        mirrored_points = [(x, -y) for x, y in points]
+        mirrored_points.append(mirrored_points[0])  # Fermer le polygone
+        msp.add_lwpolyline(mirrored_points, close=True)  # Ajouter un polygone fermé
 
     doc.saveas(output_path)
 
