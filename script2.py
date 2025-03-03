@@ -16,7 +16,7 @@ def save_to_dxf(contours, filename="output.dxf"):
         
         # Ajouter les points d'intérêt
         for point in contour:
-            msp.add_circle(center=point[0], radius=0.1, dxfattribs={'color': 1})
+            msp.add_point(location=point[0], dxfattribs={'color': 1})
     
     doc.saveas(filename)
     print(f"Coordonnées enregistrées dans {filename}")
