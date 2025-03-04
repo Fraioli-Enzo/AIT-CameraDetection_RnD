@@ -126,7 +126,7 @@ def save_polygon_to_dxf(points, raw_data, output_path):
         for i in range(len(points)):
             distance = np.linalg.norm(np.array(points[i]) - np.array(points[i-1]))
             print(f"Distance between point {i+1} and {i}: {distance}")
-            if i == 0 or np.linalg.norm(np.array(points[i]) - np.array(points[i-1])) <= avg_distance * 3:
+            if i == 0 or np.linalg.norm(np.array(points[i]) - np.array(points[i-1])) <= avg_distance * 2.2:
                 filtered_points.append(points[i])
         
         if filtered_points:
