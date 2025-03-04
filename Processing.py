@@ -109,17 +109,26 @@ def save_polygon_to_dxf(points, output_path):
     
     if points:
         # Calculate the average distance between points
-        distances = cdist(points, points)
-        avg_distance = np.mean(distances[distances > 0])
-        print(avg_distance)
-
+        distances = []
         # Filter points based on the distance threshold
         filtered_points = []
+
         for i in range(len(points)):
-            print(cdist(points[i], points[i-1]))
+            distance = np.linalg.norm(np.array(points[i]) - np.array(points[i-1]))
+            distances.append(distance)
+            print(f"Distance between point 1 and 2: {distance}")
+
+        avg_distance = np.mean(distances)
+        print(f"Average distance: {avg_distance}")
+
+        for i in range(len(points)):
+            distance = np.linalg.norm(np.array(points[i]) - np.array(points[i-1]))
+            print(f"Distance between point {i+1} and {i}: {distance}")
             if i == 0 or np.linalg.norm(np.array(points[i]) - np.array(points[i-1])) <= avg_distance:
                 filtered_points.append(points[i])
         
+
+
         if filtered_points:
             filtered_points.append(filtered_points[0])  # Close the polygon
             msp.add_lwpolyline(filtered_points, close=True)  # Add a closed polygon
