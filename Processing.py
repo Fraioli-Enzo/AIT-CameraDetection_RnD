@@ -126,7 +126,7 @@ def save_polygon_to_dxf(points, raw_data, output_path):
         for i in range(len(points)):
             distance = np.linalg.norm(np.array(points[i]) - np.array(points[i-1]))
             print(f"Distance between point {i+1} and {i}: {distance}")
-            if i == 0 or np.linalg.norm(np.array(points[i]) - np.array(points[i-1])) <= avg_distance * 2:
+            if i == 0 or np.linalg.norm(np.array(points[i]) - np.array(points[i-1])) <= avg_distance * 3:
                 filtered_points.append(points[i])
         
         if filtered_points:
@@ -138,6 +138,10 @@ def save_polygon_to_dxf(points, raw_data, output_path):
             width = max(x_coords) - min(x_coords)
             print(f"Width of the polygon: {width:.2f} units")
 
+            for point in filtered_points:
+                translated_point = (point[0] + width * 1.1, point[1])  # Translate to the left
+                msp.add_point(translated_point, dxfattribs={'color': 3})  # Blue color
+                msp.add_circle(center=translated_point, radius=0.5, dxfattribs={'color': 3})
             # Highlight the first point
             first_point = filtered_points[0]
             msp.add_circle(first_point, radius=2, dxfattribs={'color': 1})  # Red color and bigger size
@@ -151,14 +155,14 @@ def save_polygon_to_dxf(points, raw_data, output_path):
         # RAW DATA
         for point in raw_data:
             translated_point = (point[0] - width * 2.2, point[1])  # Translate to the left
-            msp.add_point(translated_point, dxfattribs={'color': 2})  # Red color
+            msp.add_point(translated_point, dxfattribs={'color': 2})  # Blue color
             msp.add_circle(center=translated_point, radius=0.5, dxfattribs={'color': 5})
 
         # REFINE DATA
         for point in points:
             translated_point = (point[0] - width * 1.1, point[1])  # Translate to the left
-            msp.add_point(translated_point, dxfattribs={'color': 6})  # Red color
-            msp.add_circle(center=translated_point, radius=1, dxfattribs={'color': 6})
+            msp.add_point(translated_point, dxfattribs={'color': 6})  # Purple color
+            msp.add_circle(center=translated_point, radius=0.5, dxfattribs={'color': 6})
     doc.saveas(output_path)
 
 
