@@ -1,6 +1,5 @@
-import cv2
-import numpy as np
 import ezdxf
+import cv2
 
 # Fonction pour enregistrer les coordonnées au format DXF
 def save_to_dxf(contours, filename="output.dxf"):
@@ -8,11 +7,11 @@ def save_to_dxf(contours, filename="output.dxf"):
     msp = doc.modelspace()
     
     for contour in contours:
-        # Ajouter les lignes des contours
-        for i in range(len(contour)):
-            start_point = contour[i][0]
-            end_point = contour[(i + 1) % len(contour)][0]
-            msp.add_line(start=start_point, end=end_point)
+        # # Ajouter les lignes des contours
+        # for i in range(len(contour)):
+        #     start_point = contour[i][0]
+        #     end_point = contour[(i + 1) % len(contour)][0]
+        #     msp.add_line(start=start_point, end=end_point)
         
         # Ajouter les points d'intérêt
         for point in contour:
@@ -74,8 +73,8 @@ else:
             epsilon = 0.02 * cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, epsilon, True)
             
-            # Dessiner les contours sur l'image originale
-            cv2.drawContours(frame[roi_start_y:roi_end_y, roi_start_x:roi_end_x], [approx], -1, (0, 255, 0), 2)
+            # # Dessiner les contours sur l'image originale
+            # cv2.drawContours(frame[roi_start_y:roi_end_y, roi_start_x:roi_end_x], [approx], -1, (0, 255, 0), 2)
             
             # Dessiner les points d'intérêt aux sommets du polygone
             for point in approx:

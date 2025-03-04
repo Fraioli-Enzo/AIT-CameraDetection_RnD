@@ -42,6 +42,7 @@ def merge_close_points(points, threshold=5):
 
     return clusters
 
+
 # 3️⃣ Trier les points pour former un contour logique
 def order_points(points):
     """Trie les points pour former un contour logique."""
@@ -72,8 +73,25 @@ def save_polygon_to_dxf(points, output_path):
 
     doc.saveas(output_path)
 
-# 5️⃣ Pipeline complet
-def process_dxf(input_dxf, output_dxf, threshold=5):
+def calculate_polygon_area(points, unit='unit'):
+    """Calcule l'aire d'un polygone à partir des points ordonnés et affiche l'unité."""
+    if len(points) < 3:  # Un polygone doit avoir au moins 3 points
+        return 0
+
+    area = 0
+    n = len(points)
+    for i in range(n):
+        x1, y1 = points[i]
+        x2, y2 = points[(i + 1) % n]  # Le point suivant, en bouclant au début
+        area += x1 * y2 - y1 * x2
+
+    area = abs(area) / 2
+    area_cm2 = area / 100  # Convertir l'aire de mm^2 en cm^2
+    print(f"🔲 {area_cm2:.1f} aire du polygone en cm^2")
+    return area
+
+# Utilisation dans le pipeline complet
+def process_dxf(input_dxf, output_dxf, threshold=5, unit='unit'):
     """Exécute le pipeline complet de traitement du fichier DXF."""
     print("📂 Lecture du fichier DXF...")
     points = extract_points_from_dxf(input_dxf)
@@ -87,6 +105,8 @@ def process_dxf(input_dxf, output_dxf, threshold=5):
     print("📌 Tri des points pour former un contour...")
     ordered_points = order_points(filtered_points)
 
+    calculate_polygon_area(ordered_points, unit)
+
     print("💾 Sauvegarde du polygone dans un nouveau DXF...")
     save_polygon_to_dxf(ordered_points, output_dxf)
     
@@ -95,5 +115,6 @@ def process_dxf(input_dxf, output_dxf, threshold=5):
 # Exécution
 input_dxf = "output.dxf"  # Remplace par ton fichier d'entrée
 output_dxf = "output2.dxf"  # Nom du fichier de sortie
+unit = 'mm'  # Unité des coordonnées des points dans le fichier DXF
 
-process_dxf(input_dxf, output_dxf, threshold=5)
+process_dxf(input_dxf, output_dxf, threshold=5, unit=unit)
