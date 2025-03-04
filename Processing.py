@@ -10,9 +10,6 @@ def extract_points_from_dxf(file_path):
     msp = doc.modelspace()
     points = []
 
-    for entity in msp:
-        print(entity.dxftype())  # Display the entity type
-
     for entity in msp.query('POINT'):
         point = (entity.dxf.location.x, entity.dxf.location.y)  # Use location
         points.append(point)
@@ -58,16 +55,32 @@ def order_points(points):
 
     return ordered
 
-# Save the closed polygon to a DXF file with a top-to-bottom mirror effect
-def save_polygon_to_dxf(points, output_path):
-    """Creates a DXF file with a closed polygon from processed points with a top-to-bottom mirror effect."""
+# Refine points by adding midpoints between each pair of sorted points
+def refine_points(points):
+    """Adds midpoints between each pair of sorted points to increase precision."""
+    if not points:
+        return []
+
+    refined_points = []
+    n = len(points)
+    for i in range(n):
+        p1 = points[i]
+        p2 = points[(i + 1) % n]  # The next point, looping back to the start
+        midpoint = ((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2)
+        refined_points.append(p1)
+        refined_points.append(midpoint)
+
+    return refined_points
+
+
+def save_ordered_points_to_dxf(points, output_path):
+    """Creates a DXF file with ordered points."""
     doc = ezdxf.new()
     msp = doc.modelspace()
     
-    if points:
-        points.append(points[0])  # Close the polygon
-        msp.add_lwpolyline(points, close=True)  # Add a closed polygon
-
+    for point in points:
+        msp.add_point(point)
+    
     doc.saveas(output_path)
 
 def calculate_polygon_area(points, unit='unit'):
@@ -87,6 +100,43 @@ def calculate_polygon_area(points, unit='unit'):
     print(f"🔲 {area_cm2:.1f} polygon area in cm^2")
     return area
 
+
+# Save the closed polygon to a DXF file with a top-to-bottom mirror effect
+def save_polygon_to_dxf(points, output_path):
+    """Creates a DXF file with a closed polygon from processed points with a top-to-bottom mirror effect."""
+    doc = ezdxf.new()
+    msp = doc.modelspace()
+    
+    if points:
+        # Calculate the average distance between points
+        distances = cdist(points, points)
+        avg_distance = np.mean(distances[distances > 0])
+        print(avg_distance)
+
+        # Filter points based on the distance threshold
+        filtered_points = []
+        for i in range(len(points)):
+            print(cdist(points[i], points[i-1]))
+            if i == 0 or np.linalg.norm(np.array(points[i]) - np.array(points[i-1])) <= avg_distance:
+                filtered_points.append(points[i])
+        
+        if filtered_points:
+            filtered_points.append(filtered_points[0])  # Close the polygon
+            msp.add_lwpolyline(filtered_points, close=True)  # Add a closed polygon
+
+            # Highlight the first point
+            first_point = filtered_points[0]
+            msp.add_circle(first_point, radius=2, dxfattribs={'color': 1})  # Red color and bigger size
+
+            second_point = filtered_points[1]
+            msp.add_circle(second_point, radius=2, dxfattribs={'color': 2})  # Red color and bigger size
+
+            third_point = filtered_points[2]
+            msp.add_circle(third_point, radius=2, dxfattribs={'color': 3})  # Red color and bigger size
+
+    doc.saveas(output_path)
+
+
 # Use in the complete pipeline
 def process_dxf(input_dxf, output_dxf, threshold=5, unit='unit'):
     """Executes the complete DXF file processing pipeline."""
@@ -102,11 +152,15 @@ def process_dxf(input_dxf, output_dxf, threshold=5, unit='unit'):
     print("Sorting points to form a contour...")
     ordered_points = order_points(filtered_points)
 
-    calculate_polygon_area(ordered_points, unit)
+    refine_point = refine_points(ordered_points)
+    print(f"{len(refine_point)} points after refining.")
 
+    save_ordered_points_to_dxf(refine_point, "refine_points.dxf")
+
+
+    calculate_polygon_area(ordered_points, unit)
     print("Saving the polygon to a new DXF file...")
-    save_polygon_to_dxf(ordered_points, output_dxf)
-    
+    save_polygon_to_dxf(refine_point, output_dxf)
     print(f"Polygon saved in {output_dxf}")
 
 # Execution

@@ -7,6 +7,15 @@ def save_to_dxf(contours, filename="output.dxf"):
     msp = doc.modelspace()
     
     for contour in contours:
+
+        # # Add lines of the contours with mirrored coordinates
+        # for i in range(len(contour)):
+        #     start_point = contour[i][0]
+        #     end_point = contour[(i + 1) % len(contour)][0]
+        #     mirrored_start_point = (start_point[0], -start_point[1])
+        #     mirrored_end_point = (end_point[0], -end_point[1])
+        #     msp.add_line(start=mirrored_start_point, end=mirrored_end_point)
+
         # Add points of interest
         for point in contour:
             x, y = point[0]
