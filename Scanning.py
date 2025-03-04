@@ -21,7 +21,8 @@ def save_to_dxf(contours, filename="output.dxf"):
             x, y = point[0]
             mirrored_point = (x, -y)
             msp.add_point(location=mirrored_point, dxfattribs={'color': 1})
-    
+            msp.add_circle(center=mirrored_point, radius=1, dxfattribs={'color': 1})  # Use CIRCLE instead of POINT
+
     doc.saveas(filename)
     print(f"Coordinates saved to {filename}")
 
@@ -59,8 +60,8 @@ else:
         gray_frame = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
 
         # Apply adaptive thresholding
-        thresh = cv2.adaptiveThreshold(gray_frame, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                       cv2.THRESH_BINARY_INV, 25, 16)
+        thresh = cv2.adaptiveThreshold(gray_frame, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
+                                    cv2.THRESH_BINARY_INV, 25, 16)
 
         # Edge detection with Canny
         edges = cv2.Canny(gray_frame, 100, 200)
@@ -81,7 +82,8 @@ else:
             # Draw the points of interest at the vertices of the polygon
             for point in approx:
                 x, y = point[0]
-                cv2.circle(frame[roi_start_y:roi_end_y, roi_start_x:roi_end_x], (x, y), 4, (0, 0, 255), -1)  # Red points
+                dot_size = 2  # Change this value to adjust the size of the dot
+                cv2.circle(frame[roi_start_y:roi_end_y, roi_start_x:roi_end_x], (x, y), dot_size, (0, 0, 255), -1)  # Red points
 
         # Display the original frame with the ROI square and detected points
         cv2.rectangle(frame, (roi_start_x, roi_start_y), (roi_end_x, roi_end_y), (255, 0, 0), 2)

@@ -102,21 +102,30 @@ def calculate_polygon_area(points, unit='unit'):
 
 
 # Save the closed polygon to a DXF file with a top-to-bottom mirror effect
-def save_polygon_to_dxf(points, output_path):
+def save_polygon_to_dxf(points, raw_data, output_path):
     """Creates a DXF file with a closed polygon from processed points with a top-to-bottom mirror effect."""
     doc = ezdxf.new()
     msp = doc.modelspace()
     
     if points:
-        # Calculate the average distance between points
+        # Start from a random point
+        start_index = np.random.randint(len(points))
+        points = points[start_index:] + points[:start_index]
+
         distances = []
-        # Filter points based on the distance threshold
         filtered_points = []
 
+        for point in raw_data:
+            msp.add_point(point, dxfattribs={'color': 2})  # Red color
+            msp.add_circle(center=point, radius=0.5, dxfattribs={'color': 5})
+
+        for point in points:
+            msp.add_point(point, dxfattribs={'color': 1})  # Red color
+            msp.add_circle(center=point, radius=1, dxfattribs={'color': 6})
+            
         for i in range(len(points)):
             distance = np.linalg.norm(np.array(points[i]) - np.array(points[i-1]))
             distances.append(distance)
-            print(f"Distance between point 1 and 2: {distance}")
 
         avg_distance = np.mean(distances)
         print(f"Average distance: {avg_distance}")
@@ -124,11 +133,9 @@ def save_polygon_to_dxf(points, output_path):
         for i in range(len(points)):
             distance = np.linalg.norm(np.array(points[i]) - np.array(points[i-1]))
             print(f"Distance between point {i+1} and {i}: {distance}")
-            if i == 0 or np.linalg.norm(np.array(points[i]) - np.array(points[i-1])) <= avg_distance:
+            if i == 0 or np.linalg.norm(np.array(points[i]) - np.array(points[i-1])) <= avg_distance * 2:
                 filtered_points.append(points[i])
         
-
-
         if filtered_points:
             filtered_points.append(filtered_points[0])  # Close the polygon
             msp.add_lwpolyline(filtered_points, close=True)  # Add a closed polygon
@@ -138,10 +145,10 @@ def save_polygon_to_dxf(points, output_path):
             msp.add_circle(first_point, radius=2, dxfattribs={'color': 1})  # Red color and bigger size
 
             second_point = filtered_points[1]
-            msp.add_circle(second_point, radius=2, dxfattribs={'color': 2})  # Red color and bigger size
+            msp.add_circle(second_point, radius=2, dxfattribs={'color': 3})  # Green color and bigger size
 
             third_point = filtered_points[2]
-            msp.add_circle(third_point, radius=2, dxfattribs={'color': 3})  # Red color and bigger size
+            msp.add_circle(third_point, radius=2, dxfattribs={'color': 3})  # Green color and bigger size
 
     doc.saveas(output_path)
 
@@ -164,12 +171,12 @@ def process_dxf(input_dxf, output_dxf, threshold=5, unit='unit'):
     refine_point = refine_points(ordered_points)
     print(f"{len(refine_point)} points after refining.")
 
-    save_ordered_points_to_dxf(refine_point, "refine_points.dxf")
+    # save_ordered_points_to_dxf(refine_point, "refine_points.dxf")
 
+    # calculate_polygon_area(ordered_points, unit)
 
-    calculate_polygon_area(ordered_points, unit)
     print("Saving the polygon to a new DXF file...")
-    save_polygon_to_dxf(refine_point, output_dxf)
+    save_polygon_to_dxf(refine_point, points, output_dxf)
     print(f"Polygon saved in {output_dxf}")
 
 # Execution
