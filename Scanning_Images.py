@@ -241,7 +241,7 @@ class ImagePipeline:
         self.config = config or ImageProcessingConfig()
     
     def compare_with_reference(self, reference_path: str, test_path: str):
-        """Compare a test image with a reference image to find anomalies, focusing only on the main object."""
+        """Compare a test image with a reference image to find anomalies."""
         # Load images
         reference_image = ImageLoader.load_image(reference_path)
         test_image = ImageLoader.load_image(test_path)
@@ -254,7 +254,53 @@ class ImagePipeline:
         filtered_ref, roi_ref = ImagePreprocessor.preprocess_image(reference_image, self.config)
         filtered_test, roi_test = ImagePreprocessor.preprocess_image(test_image, self.config)
         
-        # 1. Extract the main object in both images (with eroded edges)
+        # Compare preprocessed regions
+        diff_mask, similarity_score = ImageComparator.compare_images(filtered_ref, filtered_test)
+        
+        # Detect specific anomalies
+        anomalies = ImageComparator.detect_anomalies(diff_mask)
+        
+        # Create visualization
+        comparison_viz = ImageComparator.highlight_anomalies(roi_ref, roi_test, diff_mask)
+        
+        # Display results
+        cv2.imshow('Image Comparison', comparison_viz)
+        
+        # Print analysis
+        print(f"Similarity: {100-similarity_score:.2f}% (Difference: {similarity_score:.2f}%)")
+        print(f"Found {len(anomalies)} anomaly regions")
+        
+        for i, ((x, y, w, h), area) in enumerate(anomalies):
+            print(f"Anomaly #{i+1}: Position (x={x}, y={y}), Size {w}x{h}, Area {area:.1f} px")
+        
+        print("\033[91m Press q to close windows / press r to restart program \033[0m")
+        while True:
+            key = cv2.waitKey(0) & 0xFF
+            if key == ord('q'):
+                break
+            if key == ord('r'):
+                cv2.destroyAllWindows()
+                main()  # Restart the program by calling main() again
+                return
+            
+        cv2.destroyAllWindows()
+        return anomalies, similarity_score
+
+    def compare_objects_only(self, reference_path: str, test_path: str):
+        """Compare a test image with a reference image to find anomalies, focusing ONLY on the main object."""
+        # Load images
+        reference_image = ImageLoader.load_image(reference_path)
+        test_image = ImageLoader.load_image(test_path)
+        
+        if reference_image is None or test_image is None:
+            print("Error loading one or both images")
+            return None
+        
+        # Preprocess both images the same way
+        filtered_ref, roi_ref = ImagePreprocessor.preprocess_image(reference_image, self.config)
+        filtered_test, roi_test = ImagePreprocessor.preprocess_image(test_image, self.config)
+        
+        # 1. Extract the main object in both images
         ref_mask = self._extract_main_object(filtered_ref)
         test_mask = self._extract_main_object(filtered_test)
         
@@ -269,18 +315,22 @@ class ImagePipeline:
         kernel = np.ones((3, 3), np.uint8)
         filtered_diff_mask = cv2.morphologyEx(diff_mask, cv2.MORPH_OPEN, kernel)
         
-        # Detect specific anomalies
-        anomalies = ImageComparator.detect_anomalies(filtered_diff_mask, min_area=20)  # Increased min_area
+        # 5. Apply strong erosion to focus only on significant center anomalies
+        erosion_kernel = np.ones((5, 5), np.uint8)
+        center_diff_mask = cv2.erode(filtered_diff_mask, erosion_kernel, iterations=3)
+        
+        # Detect specific anomalies with higher threshold
+        anomalies = ImageComparator.detect_anomalies(center_diff_mask, min_area=50)  # Higher min_area
         
         # Create visualization
-        comparison_viz = ImageComparator.highlight_anomalies(ref_object, test_object, filtered_diff_mask)
+        comparison_viz = ImageComparator.highlight_anomalies(ref_object, test_object, center_diff_mask)
         
         # Display results
-        cv2.imshow('Image Comparison', comparison_viz)
+        cv2.imshow('Objects Only Comparison', comparison_viz)
         
         # Print analysis
         print(f"Similarity: {100-similarity_score:.2f}% (Difference: {similarity_score:.2f}%)")
-        print(f"Found {len(anomalies)} anomaly regions after filtering")
+        print(f"Found {len(anomalies)} significant anomaly regions in the center of the object")
         
         for i, ((x, y, w, h), area) in enumerate(anomalies):
             print(f"Anomaly #{i+1}: Position (x={x}, y={y}), Size {w}x{h}, Area {area:.1f} px")
@@ -417,9 +467,10 @@ def main():
     print("Select operation:")
     print("1. Detect corners in a single image")
     print("2. Compare two images to find anomalies")
+    print("3. Compare two images focusing only on the main object")
     
-    # choice = input("Enter your choice (1 or 2): ")
-    choice = '2'
+    choice = input("Enter your choice (1, 2 or 3): ")
+    
     if choice == '1':
         # Single image processing
         file_path = filedialog.askopenfilename(
@@ -438,7 +489,7 @@ def main():
             print("No file selected")
             
     elif choice == '2':
-        # Image comparison mode
+        # Image comparison mode (with all features)
         print("\033[93m Select reference image (good/normal image): \033[0m")
         reference_path = filedialog.askopenfilename(
             title="Select Reference Image",
@@ -466,6 +517,36 @@ def main():
             return
             
         pipeline.compare_with_reference(reference_path, test_path)
+        
+    elif choice == '3':
+        # Object-focused comparison mode
+        print("\033[93m Select reference image (good/normal image): \033[0m")
+        reference_path = filedialog.askopenfilename(
+            title="Select Reference Image",
+            filetypes=[
+                ("Image files", "*.jpg *.jpeg *.png *.bmp *.tif *.tiff"),
+                ("All files", "*.*")
+            ]
+        )
+        
+        if not reference_path:
+            print("No reference image selected")
+            return
+            
+        print("\033[93m Select test image (image to check for anomalies): \033[0m")
+        test_path = filedialog.askopenfilename(
+            title="Select Test Image",
+            filetypes=[
+                ("Image files", "*.jpg *.jpeg *.png *.bmp *.tif *.tiff"),
+                ("All files", "*.*")
+            ]
+        )
+        
+        if not test_path:
+            print("No test image selected")
+            return
+            
+        pipeline.compare_objects_only(reference_path, test_path)
     else:
         print("Invalid choice")
 
