@@ -1,29 +1,25 @@
 import ezdxf
 import cv2
+import numpy as np
 
 # Function to save coordinates to a DXF file 
-def save_to_dxf(contours, filename="output.dxf"):
+def save_to_dxf(corners, filename="output.dxf"):
     doc = ezdxf.new(dxfversion='R2010')
     msp = doc.modelspace()
     
-    for contour in contours:
-
-        # # Add lines of the contours with mirrored coordinates
-        # for i in range(len(contour)):
-        #     start_point = contour[i][0]
-        #     end_point = contour[(i + 1) % len(contour)][0]
-        #     mirrored_start_point = (start_point[0], -start_point[1])
-        #     mirrored_end_point = (end_point[0], -end_point[1])
-        #     msp.add_line(start=mirrored_start_point, end=mirrored_end_point)
-
-        # Add points of interest
-        for point in contour:
-            x, y = point[0]
-            mirrored_point = (x, -y)
-            msp.add_point(location=mirrored_point, dxfattribs={'color': 1})
+    for point in corners:
+        x, y = point.ravel()  # Convert from array to simple coordinates
+        mirrored_point = (float(x), float(-y))  # Convert to float and mirror y
+        msp.add_point(mirrored_point, dxfattribs={'color': 1})
     
     doc.saveas(filename)
     print(f"Coordinates saved to {filename}")
+
+# Function to save an image from the camera
+def save_image(frame, filename="captured_image.png"):
+    cv2.imwrite(filename, frame)
+    print(f"Image saved to {filename}")
+
 
 # Open the camera connection
 cap = cv2.VideoCapture(0)
@@ -34,7 +30,7 @@ if not cap.isOpened():
 else:
     print("Press 'q' to exit the video window.")
     print("Press 's' to save coordinates to a DXF file.")
-
+    print("Press 'i' to save the current frame as an image.")
     while True:
         # Capture frames frame by frame
         ret, frame = cap.read()
@@ -57,42 +53,89 @@ else:
 
         # Convert the ROI to grayscale
         gray_frame = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-
-        # Apply adaptive thresholding
-        thresh = cv2.adaptiveThreshold(gray_frame, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                       cv2.THRESH_BINARY_INV, 25, 16)
-
-        # Edge detection with Canny
-        edges = cv2.Canny(gray_frame, 100, 200)
-
-        # Morphological transformation to detect blobs
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        
+        # Apply bilateral filter to reduce noise while preserving edges
+        filtered = cv2.bilateralFilter(gray_frame, 9, 75, 75)
+        
+        # Apply adaptive thresholding with MEAN method (less blurry than Gaussian)
+        thresh = cv2.adaptiveThreshold(filtered, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
+                                      cv2.THRESH_BINARY_INV, 15, 2)
+        
+        # Improve edge detection
+        edges = cv2.Canny(filtered, 50, 150)
+        
+        # Morphological operations to clean up edges
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
         morph = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
 
-        # Find contours of the detected blobs
+        # Find contours
         contours, _ = cv2.findContours(morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        # Draw contours and points of interest directly on the original image
-        for contour in contours:
-            # Calculate the polygonal approximation of the contour
-            epsilon = 0.02 * cv2.arcLength(contour, True)
+        
+        # Filter contours by area to remove noise
+        min_area = 100
+        valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_area]
+        
+        # Create a copy of the ROI for visualization
+        display_roi = roi.copy()
+        roi_without_border = roi.copy()
+        # Draw contours on the display image
+        cv2.drawContours(display_roi, valid_contours, -1, (0, 255, 0), 1)
+        
+        # Store all detected corner points
+        all_corners = []
+        
+        for contour in valid_contours:
+            # Use a smaller epsilon for more accurate corner detection
+            epsilon = 0.01 * cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, epsilon, True)
             
-            # Draw the points of interest at the vertices of the polygon
+            # Alternative: Use Harris corner detector for more precise corner detection
+            corners = cv2.goodFeaturesToTrack(gray_frame, 
+                                             mask=cv2.drawContours(np.zeros_like(gray_frame), [contour], 0, 255, -1),
+                                             maxCorners=25,
+                                             qualityLevel=0.01,
+                                             minDistance=10)
+            
+            if corners is not None:
+                all_corners.extend(corners)
+                for corner in corners:
+                    x, y = corner.ravel()
+                    cv2.circle(display_roi, (int(x), int(y)), 3, (0, 0, 255), -1)
+            
+            # Also draw the approximated polygon corners
             for point in approx:
                 x, y = point[0]
-                cv2.circle(frame[roi_start_y:roi_end_y, roi_start_x:roi_end_x], (x, y), 4, (0, 0, 255), -1)  # Red points
+                cv2.circle(display_roi, (x, y), 5, (255, 0, 0), -1)  # Blue points
+                all_corners.append(np.array([[x, y]], dtype=np.float32))
 
-        # Display the original frame with the ROI square and detected points
+        # Display the original frame with the ROI square
+        frame[roi_start_y:roi_end_y, roi_start_x:roi_end_x] = display_roi
         cv2.rectangle(frame, (roi_start_x, roi_start_y), (roi_end_x, roi_end_y), (255, 0, 0), 2)
+        
+        # Display the edge image for debugging
+        edge_display = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+        thresh_display = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
+        gray_display = cv2.cvtColor(filtered, cv2.COLOR_GRAY2BGR)
+        
+        # Stack displays horizontally
+        top_row = np.concat([display_roi, edge_display])
+        bottom_row = np.concat([thresh_display, gray_display])
+        combined = np.concat([top_row, bottom_row])
+        
+        # Resize for display
+        combined = cv2.resize(combined, (0, 0), fx=1, fy=1)
+        
         cv2.imshow('Original Frame', frame)
+        cv2.imshow('Processing Steps', combined)
 
         # Exit the loop if 'q' is pressed
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             break
-        elif key == ord('s'):
-            save_to_dxf(contours)
+        elif key == ord('s') and all_corners:
+            save_to_dxf(all_corners)
+        elif key == ord('i'):
+            save_image(roi_without_border)
 
     # Release the capture when everything is done
     cap.release()
