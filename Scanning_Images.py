@@ -155,6 +155,47 @@ class ImageCornerDetectionPipeline:
     def __init__(self, config: Optional[ImageProcessingConfig] = None):
         self.config = config or ImageProcessingConfig()
     
+    def compare_with_reference(self, reference_path: str, test_path: str):
+        """Compare a test image with a reference image to find anomalies."""
+        # Load images
+        reference_image = ImageLoader.load_image(reference_path)
+        test_image = ImageLoader.load_image(test_path)
+        
+        if reference_image is None or test_image is None:
+            print("Error loading one or both images")
+            return None
+        
+        # Preprocess both images the same way
+        filtered_ref, roi_ref = ImagePreprocessor.preprocess_image(reference_image, self.config)
+        filtered_test, roi_test = ImagePreprocessor.preprocess_image(test_image, self.config)
+        
+        # Compare preprocessed regions
+        diff_mask, similarity_score = ImageComparator.compare_images(filtered_ref, filtered_test)
+        
+        # Detect specific anomalies
+        anomalies = ImageComparator.detect_anomalies(diff_mask)
+        
+        # Create visualization
+        comparison_viz = ImageComparator.highlight_anomalies(roi_ref, roi_test, diff_mask)
+        
+        # Display results
+        cv2.imshow('Image Comparison', comparison_viz)
+        
+        # Print analysis
+        print(f"Similarity: {100-similarity_score:.2f}% (Difference: {similarity_score:.2f}%)")
+        print(f"Found {len(anomalies)} anomaly regions")
+        
+        for i, ((x, y, w, h), area) in enumerate(anomalies):
+            print(f"Anomaly #{i+1}: Position (x={x}, y={y}), Size {w}x{h}, Area {area:.1f} px")
+        
+        while True:
+            key = cv2.waitKey(0) & 0xFF
+            if key == ord('q'):
+                break
+        
+        cv2.destroyAllWindows()
+        return anomalies, similarity_score
+
     def process_image(self, image_path: str):
         # Load the image
         frame = ImageLoader.load_image(image_path)
@@ -198,30 +239,186 @@ class ImageCornerDetectionPipeline:
         cv2.destroyAllWindows()
         return all_corners
 
+class ImageComparator:
+    """Handles comparison between two images to detect anomalies."""
+    
+    @staticmethod
+    def compare_images(image1: np.ndarray, image2: np.ndarray, 
+                      threshold: float = 30, 
+                      blur_size: int = 5) -> Tuple[np.ndarray, float]:
+        """
+        Compare two images and return the difference mask and similarity score.
+        
+        Args:
+            image1: First image
+            image2: Second image
+            threshold: Threshold for difference detection (0-255)
+            blur_size: Size of gaussian blur kernel
+            
+        Returns:
+            Tuple containing the difference mask and similarity score
+        """
+        # Convert images to grayscale
+        if len(image1.shape) == 3:
+            gray1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
+        else:
+            gray1 = image1
+            
+        if len(image2.shape) == 3:
+            gray2 = cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
+        else:
+            gray2 = image2
+        
+        # Ensure images are the same size
+        if gray1.shape != gray2.shape:
+            gray2 = cv2.resize(gray2, (gray1.shape[1], gray1.shape[0]))
+        
+        # Compute absolute difference between the images
+        diff = cv2.absdiff(gray1, gray2)
+        
+        # Apply threshold to highlight significant differences
+        _, thresholded_diff = cv2.threshold(diff, threshold, 255, cv2.THRESH_BINARY)
+        
+        # Apply Gaussian blur to reduce noise
+        blurred_diff = cv2.GaussianBlur(thresholded_diff, (blur_size, blur_size), 0)
+        
+        # Calculate similarity score (lower means more similar)
+        # Normalized by image size to get percentage
+        non_zero = np.count_nonzero(blurred_diff)
+        total_pixels = gray1.size
+        similarity_score = (non_zero / total_pixels) * 100
+        
+        return blurred_diff, similarity_score
+    
+    @staticmethod
+    def highlight_anomalies(image1: np.ndarray, image2: np.ndarray, 
+                          diff_mask: np.ndarray) -> np.ndarray:
+        """
+        Create a visualization with anomalies highlighted.
+        
+        Args:
+            image1: Reference image
+            image2: Test image with potential anomalies
+            diff_mask: Difference mask from compare_images()
+            
+        Returns:
+            Visualization with anomalies highlighted
+        """
+        # Ensure images are the same size and in color
+        if image1.shape != image2.shape:
+            image2 = cv2.resize(image2, (image1.shape[1], image1.shape[0]))
+        
+        if len(image1.shape) == 2:
+            image1 = cv2.cvtColor(image1, cv2.COLOR_GRAY2BGR)
+        
+        if len(image2.shape) == 2:
+            image2 = cv2.cvtColor(image2, cv2.COLOR_GRAY2BGR)
+        
+        # Create a red mask for anomalies
+        red_mask = np.zeros_like(image1)
+        if len(diff_mask.shape) == 2:  # If diff_mask is grayscale
+            red_mask[diff_mask > 0] = [0, 0, 255]  # Set red where differences are detected
+        
+        # Blend original image with red highlights
+        highlighted = cv2.addWeighted(image2, 0.7, red_mask, 0.3, 0)
+        
+        # Create comparison visualization
+        top_row = np.hstack([image1, image2])
+        bottom_row = np.hstack([cv2.cvtColor(diff_mask, cv2.COLOR_GRAY2BGR), highlighted])
+        comparison = np.vstack([top_row, bottom_row])
+        
+        return comparison
+    
+    @staticmethod
+    def detect_anomalies(diff_mask: np.ndarray, 
+                        min_area: int = 50) -> List[Tuple[Tuple[int, int, int, int], float]]:
+        """
+        Detect anomaly regions in the difference mask.
+        
+        Args:
+            diff_mask: Difference mask from compare_images()
+            min_area: Minimum contour area to be considered an anomaly
+            
+        Returns:
+            List of (bounding_box, area) tuples for each anomaly
+        """
+        # Find contours in the difference mask
+        contours, _ = cv2.findContours(diff_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        anomalies = []
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area >= min_area:
+                x, y, w, h = cv2.boundingRect(contour)
+                anomalies.append(((x, y, w, h), area))
+        
+        return anomalies
+    
+
 def main():
-    """Main function to select and process an image."""
+    """Main function to select and process images."""
     # Create a simple Tkinter root window
     root = tk.Tk()
     root.withdraw()  # Hide the root window
 
-    # Ask the user to select an image file
-    file_path = filedialog.askopenfilename(
-        title="Select Image File",
-        filetypes=[
-            ("Image files", "*.jpg *.jpeg *.png *.bmp *.tif *.tiff"),
-            ("All files", "*.*")
-        ]
-    )
+    # Create pipeline with default configuration
+    pipeline = ImageCornerDetectionPipeline()
     
-    if file_path:
-        # Create pipeline with default configuration
-        pipeline = ImageCornerDetectionPipeline()
+    # Ask user what they want to do
+    print("Select operation:")
+    print("1. Detect corners in a single image")
+    print("2. Compare two images to find anomalies")
+    
+    choice = input("Enter your choice (1 or 2): ")
+    
+    if choice == '1':
+        # Single image processing
+        file_path = filedialog.askopenfilename(
+            title="Select Image File",
+            filetypes=[
+                ("Image files", "*.jpg *.jpeg *.png *.bmp *.tif *.tiff"),
+                ("All files", "*.*")
+            ]
+        )
         
-        corners = pipeline.process_image(file_path)
-        if corners:
-            print(f"Found {len(corners)} corners in the image")
+        if file_path:
+            corners = pipeline.process_image(file_path)
+            if corners:
+                print(f"Found {len(corners)} corners in the image")
+        else:
+            print("No file selected")
+            
+    elif choice == '2':
+        # Image comparison mode
+        print("Select reference image (good/normal image):")
+        reference_path = filedialog.askopenfilename(
+            title="Select Reference Image",
+            filetypes=[
+                ("Image files", "*.jpg *.jpeg *.png *.bmp *.tif *.tiff"),
+                ("All files", "*.*")
+            ]
+        )
+        
+        if not reference_path:
+            print("No reference image selected")
+            return
+            
+        print("Select test image (image to check for anomalies):")
+        test_path = filedialog.askopenfilename(
+            title="Select Test Image",
+            filetypes=[
+                ("Image files", "*.jpg *.jpeg *.png *.bmp *.tif *.tiff"),
+                ("All files", "*.*")
+            ]
+        )
+        
+        if not test_path:
+            print("No test image selected")
+            return
+            
+        pipeline.compare_with_reference(reference_path, test_path)
     else:
-        print("No file selected")
+        print("Invalid choice")
 
 if __name__ == "__main__":
     main()
