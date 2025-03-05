@@ -132,6 +132,7 @@ def process_image(image_path):
         key = cv2.waitKey(0) & 0xFF
         if key == ord('q'):
             break
+
     
     cv2.destroyAllWindows()
     return all_corners
