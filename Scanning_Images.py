@@ -51,6 +51,7 @@ class ImagePreprocessor:
         
         return filtered, roi
 
+################################# Suppressible Class ###############################################
 class EdgeDetector:
     """Handles edge and contour detection."""
     @staticmethod
@@ -144,6 +145,7 @@ class Visualizer:
         
         return combined_frames
 
+####################################################################################################
 class ImageComparator:
     """Handles comparison between two images to detect anomalies."""
     
@@ -222,7 +224,7 @@ class ImageComparator:
     
     @staticmethod
     def detect_anomalies(diff_mask: np.ndarray, 
-                        min_area: int = 20) -> List[Tuple[Tuple[int, int, int, int], float]]:
+                        min_area: int = 5) -> List[Tuple[Tuple[int, int, int, int], float]]:
         # Find contours in the difference mask
         contours, _ = cv2.findContours(diff_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
@@ -348,6 +350,54 @@ class ImagePipeline:
         cv2.destroyAllWindows()
         return anomalies, similarity_score
 
+    def process_image(self, image_path: str):
+        # Load the image
+        frame = ImageLoader.load_image(image_path)
+        if frame is None:
+            return None
+        
+        # Preprocess the image
+        filtered, roi = ImagePreprocessor.preprocess_image(frame, self.config)
+        
+        # Detect edges and contours
+        thresh, edges, valid_contours = EdgeDetector.detect_edges_and_contours(filtered, self.config)
+        
+        # Create display image with contours
+        display_roi = roi.copy()
+        cv2.drawContours(display_roi, valid_contours, -1, (0, 255, 0), 1)
+        
+        # Detect corners
+        all_corners = CornerDetector.detect_corners(
+            cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY), 
+            valid_contours, 
+            self.config
+        )
+        
+        # Draw corners on display image
+        for corner in all_corners:
+            x, y = corner.ravel()
+            cv2.circle(display_roi, (int(x), int(y)), 3, (0, 0, 255), -1)
+        
+        # Create visualization
+        combined_frames = Visualizer.create_visualization(roi, display_roi, edges, thresh, filtered)
+        
+        # Display results
+        # cv2.imshow('Original Image', frame)
+        cv2.imshow('Processing Steps', combined_frames)
+        
+        print("\033[91m Press q to close windows / press r to restart program \033[0m")
+        while True:
+            key = cv2.waitKey(0) & 0xFF
+            if key == ord('q'):
+                break
+            if key == ord('r'):
+                cv2.destroyAllWindows()
+                main()  # Restart the program by calling main() again
+                return
+        
+        cv2.destroyAllWindows()
+        return all_corners
+
     def _extract_main_object(self, image: np.ndarray) -> np.ndarray:
         """Extract the main object from the image, returning a binary mask with eroded edges to avoid edge noise."""
         # Ensure image is grayscale
@@ -408,51 +458,6 @@ class ImagePipeline:
         
         return eroded_mask
     
-    def process_image(self, image_path: str):
-        # Load the image
-        frame = ImageLoader.load_image(image_path)
-        if frame is None:
-            return None
-        
-        # Preprocess the image
-        filtered, roi = ImagePreprocessor.preprocess_image(frame, self.config)
-        
-        # Detect edges and contours
-        thresh, edges, valid_contours = EdgeDetector.detect_edges_and_contours(filtered, self.config)
-        
-        # Create display image with contours
-        display_roi = roi.copy()
-        cv2.drawContours(display_roi, valid_contours, -1, (0, 255, 0), 1)
-        
-        # Detect corners
-        all_corners = CornerDetector.detect_corners(
-            cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY), 
-            valid_contours, 
-            self.config
-        )
-        
-        # Draw corners on display image
-        for corner in all_corners:
-            x, y = corner.ravel()
-            cv2.circle(display_roi, (int(x), int(y)), 3, (0, 0, 255), -1)
-        
-        # Create visualization
-        combined_frames = Visualizer.create_visualization(roi, display_roi, edges, thresh, filtered)
-        
-        # Display results
-        # cv2.imshow('Original Image', frame)
-        cv2.imshow('Processing Steps', combined_frames)
-        
-        # Print instructions in red
-        print("\033[91mpress q to close windows\033[0m")
-        while True:
-            key = cv2.waitKey(0) & 0xFF
-            if key == ord('q'):
-                break
-        
-        cv2.destroyAllWindows()
-        return all_corners
-
 
 def main():
     """Main function to select and process images."""
