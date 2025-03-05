@@ -224,11 +224,12 @@ class ImageComparator:
     
     @staticmethod
     def detect_anomalies(diff_mask: np.ndarray, 
-                        min_area: int = 5) -> List[Tuple[Tuple[int, int, int, int], float]]:
+                        min_area: int = 20) -> List[Tuple[Tuple[int, int, int, int], float]]:
         # Find contours in the difference mask
         contours, _ = cv2.findContours(diff_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
         anomalies = []
+        # For debugging: print contour details
+        print(f"Found {len(contours)} potential anomaly contours")
         for contour in contours:
             area = cv2.contourArea(contour)
             if area >= min_area:
@@ -260,7 +261,7 @@ class ImagePipeline:
         diff_mask, similarity_score = ImageComparator.compare_images(filtered_ref, filtered_test)
         
         # Detect specific anomalies
-        anomalies = ImageComparator.detect_anomalies(diff_mask)
+        anomalies = ImageComparator.detect_anomalies(diff_mask, 5)
         
         # Create visualization
         comparison_viz = ImageComparator.highlight_anomalies(roi_ref, roi_test, diff_mask)
@@ -322,7 +323,7 @@ class ImagePipeline:
         center_diff_mask = cv2.erode(filtered_diff_mask, erosion_kernel, iterations=3)
         
         # Detect specific anomalies with higher threshold
-        anomalies = ImageComparator.detect_anomalies(center_diff_mask, min_area=50)  # Higher min_area
+        anomalies = ImageComparator.detect_anomalies(center_diff_mask, min_area=0)  # Higher min_area
         
         # Create visualization
         comparison_viz = ImageComparator.highlight_anomalies(ref_object, test_object, center_diff_mask)
