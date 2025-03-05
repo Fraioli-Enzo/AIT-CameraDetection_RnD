@@ -35,14 +35,8 @@ class ImagePreprocessor:
     """Applies preprocessing techniques to the image."""
     @staticmethod
     def preprocess_image(image: np.ndarray, config: ImageProcessingConfig) -> Tuple[np.ndarray, np.ndarray]:
-        # Select ROI (can be customized)
-        frame_height, frame_width = image.shape[:2]
-        roi_size = min(frame_height, frame_width) - 20
-        roi_start_x = frame_width // 2 - roi_size // 2
-        roi_start_y = frame_height // 2 - roi_size // 2
-        roi_end_x = roi_start_x + roi_size
-        roi_end_y = roi_start_y + roi_size
-        roi = image[roi_start_y:roi_end_y, roi_start_x:roi_end_x]
+        # Use the entire image as ROI
+        roi = image.copy()
 
         # Convert to grayscale
         gray_frame = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
@@ -150,7 +144,7 @@ class Visualizer:
         
         return combined_frames
 
-class ImageCornerDetectionPipeline:
+class ImagePipeline:
     """Main pipeline for image corner detection."""
     def __init__(self, config: Optional[ImageProcessingConfig] = None):
         self.config = config or ImageProcessingConfig()
@@ -246,18 +240,6 @@ class ImageComparator:
     def compare_images(image1: np.ndarray, image2: np.ndarray, 
                       threshold: float = 30, 
                       blur_size: int = 5) -> Tuple[np.ndarray, float]:
-        """
-        Compare two images and return the difference mask and similarity score.
-        
-        Args:
-            image1: First image
-            image2: Second image
-            threshold: Threshold for difference detection (0-255)
-            blur_size: Size of gaussian blur kernel
-            
-        Returns:
-            Tuple containing the difference mask and similarity score
-        """
         # Convert images to grayscale
         if len(image1.shape) == 3:
             gray1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
@@ -293,17 +275,6 @@ class ImageComparator:
     @staticmethod
     def highlight_anomalies(image1: np.ndarray, image2: np.ndarray, 
                           diff_mask: np.ndarray) -> np.ndarray:
-        """
-        Create a visualization with anomalies highlighted.
-        
-        Args:
-            image1: Reference image
-            image2: Test image with potential anomalies
-            diff_mask: Difference mask from compare_images()
-            
-        Returns:
-            Visualization with anomalies highlighted
-        """
         # Ensure images are the same size and in color
         if image1.shape != image2.shape:
             image2 = cv2.resize(image2, (image1.shape[1], image1.shape[0]))
@@ -332,16 +303,6 @@ class ImageComparator:
     @staticmethod
     def detect_anomalies(diff_mask: np.ndarray, 
                         min_area: int = 50) -> List[Tuple[Tuple[int, int, int, int], float]]:
-        """
-        Detect anomaly regions in the difference mask.
-        
-        Args:
-            diff_mask: Difference mask from compare_images()
-            min_area: Minimum contour area to be considered an anomaly
-            
-        Returns:
-            List of (bounding_box, area) tuples for each anomaly
-        """
         # Find contours in the difference mask
         contours, _ = cv2.findContours(diff_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
@@ -362,15 +323,15 @@ def main():
     root.withdraw()  # Hide the root window
 
     # Create pipeline with default configuration
-    pipeline = ImageCornerDetectionPipeline()
+    pipeline = ImagePipeline()
     
     # Ask user what they want to do
     print("Select operation:")
     print("1. Detect corners in a single image")
     print("2. Compare two images to find anomalies")
     
-    choice = input("Enter your choice (1 or 2): ")
-    
+    # choice = input("Enter your choice (1 or 2): ")
+    choice = '2'
     if choice == '1':
         # Single image processing
         file_path = filedialog.askopenfilename(
@@ -390,7 +351,7 @@ def main():
             
     elif choice == '2':
         # Image comparison mode
-        print("Select reference image (good/normal image):")
+        print("\033[93m Select reference image (good/normal image): \033[0m")
         reference_path = filedialog.askopenfilename(
             title="Select Reference Image",
             filetypes=[
@@ -403,7 +364,7 @@ def main():
             print("No reference image selected")
             return
             
-        print("Select test image (image to check for anomalies):")
+        print("\033[93m Select test image (image to check for anomalies): \033[0m")
         test_path = filedialog.askopenfilename(
             title="Select Test Image",
             filetypes=[

@@ -1,6 +1,7 @@
 import ezdxf
 import cv2
 import numpy as np
+import os
 
 # Function to save coordinates to a DXF file 
 def save_to_dxf(corners, filename="output.dxf"):
@@ -136,9 +137,11 @@ else:
         elif key == ord('s') and all_corners:
             save_to_dxf(all_corners)
         elif key == ord('i'):
-            save_image(roi_without_border, "pattern_image.png")
+            pattern_image_count = len([name for name in os.listdir('.') if name.startswith("pattern_image")])
+            save_image(roi_without_border, f"pattern_image{pattern_image_count + 1}.png")
         elif key == ord('o'):
-            save_image(roi_without_border, "anomali_image.png")
+            pattern_image_count = len([name for name in os.listdir('.') if name.startswith("anomali_image")])
+            save_image(roi_without_border, f"anomali_image{pattern_image_count + 1}.png")
 
     # Release the capture when everything is done
     cap.release()
