@@ -222,7 +222,7 @@ class ImageComparator:
     
     @staticmethod
     def detect_anomalies(diff_mask: np.ndarray, 
-                        min_area: int = 5) -> List[Tuple[Tuple[int, int, int, int], float]]:
+                        min_area: int = 20) -> List[Tuple[Tuple[int, int, int, int], float]]:
         # Find contours in the difference mask
         contours, _ = cv2.findContours(diff_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
@@ -241,7 +241,7 @@ class ImagePipeline:
         self.config = config or ImageProcessingConfig()
     
     def compare_with_reference(self, reference_path: str, test_path: str):
-        """Compare a test image with a reference image to find anomalies."""
+        """Compare a test image with a reference image to find anomalies, focusing only on the main object."""
         # Load images
         reference_image = ImageLoader.load_image(reference_path)
         test_image = ImageLoader.load_image(test_path)
@@ -254,21 +254,33 @@ class ImagePipeline:
         filtered_ref, roi_ref = ImagePreprocessor.preprocess_image(reference_image, self.config)
         filtered_test, roi_test = ImagePreprocessor.preprocess_image(test_image, self.config)
         
-        # Compare preprocessed regions
-        diff_mask, similarity_score = ImageComparator.compare_images(filtered_ref, filtered_test)
+        # 1. Extract the main object in both images (with eroded edges)
+        ref_mask = self._extract_main_object(filtered_ref)
+        test_mask = self._extract_main_object(filtered_test)
+        
+        # 2. Apply masks to original images
+        ref_object = cv2.bitwise_and(roi_ref, roi_ref, mask=ref_mask)
+        test_object = cv2.bitwise_and(roi_test, roi_test, mask=test_mask)
+        
+        # 3. Compare only the masked regions
+        diff_mask, similarity_score = ImageComparator.compare_images(ref_object, test_object)
+        
+        # 4. Apply additional filtering to remove small anomalies
+        kernel = np.ones((3, 3), np.uint8)
+        filtered_diff_mask = cv2.morphologyEx(diff_mask, cv2.MORPH_OPEN, kernel)
         
         # Detect specific anomalies
-        anomalies = ImageComparator.detect_anomalies(diff_mask)
+        anomalies = ImageComparator.detect_anomalies(filtered_diff_mask, min_area=20)  # Increased min_area
         
         # Create visualization
-        comparison_viz = ImageComparator.highlight_anomalies(roi_ref, roi_test, diff_mask)
+        comparison_viz = ImageComparator.highlight_anomalies(ref_object, test_object, filtered_diff_mask)
         
         # Display results
         cv2.imshow('Image Comparison', comparison_viz)
         
         # Print analysis
         print(f"Similarity: {100-similarity_score:.2f}% (Difference: {similarity_score:.2f}%)")
-        print(f"Found {len(anomalies)} anomaly regions")
+        print(f"Found {len(anomalies)} anomaly regions after filtering")
         
         for i, ((x, y, w, h), area) in enumerate(anomalies):
             print(f"Anomaly #{i+1}: Position (x={x}, y={y}), Size {w}x{h}, Area {area:.1f} px")
@@ -286,6 +298,66 @@ class ImagePipeline:
         cv2.destroyAllWindows()
         return anomalies, similarity_score
 
+    def _extract_main_object(self, image: np.ndarray) -> np.ndarray:
+        """Extract the main object from the image, returning a binary mask with eroded edges to avoid edge noise."""
+        # Ensure image is grayscale
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image.copy()
+        
+        # Apply adaptive thresholding to separate foreground from background
+        thresh = cv2.adaptiveThreshold(
+            gray, 255,
+            self.config.adaptive_thresh_method,
+            self.config.adaptive_thresh_type,
+            self.config.adaptive_block_size,
+            self.config.adaptive_const
+        )
+        
+        # Apply morphological operations to clean up the mask
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        cleaned = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+        cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_OPEN, kernel)
+        
+        # Find contours
+        contours, _ = cv2.findContours(cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # If no contours found, return the original threshold
+        if not contours:
+            return thresh
+        
+        # Create an empty mask
+        mask = np.zeros_like(gray)
+        
+        # Find the largest contour (assume it's the main object)
+        largest_contour = max(contours, key=cv2.contourArea)
+        
+        # Draw the largest contour
+        cv2.drawContours(mask, [largest_contour], 0, 255, -1)
+        
+        # Optional: Fill holes in the mask
+        mask_floodfill = mask.copy()
+        h, w = mask.shape[:2]
+        mask_zero = np.zeros((h+2, w+2), np.uint8)
+        cv2.floodFill(mask_floodfill, mask_zero, (0, 0), 255)
+        mask_floodfill_inv = cv2.bitwise_not(mask_floodfill)
+        mask = mask | mask_floodfill_inv
+        
+        # Create an eroded version to avoid edge noise
+        erosion_kernel = np.ones((3, 3), np.uint8)
+        eroded_mask = cv2.erode(mask, erosion_kernel, iterations=2)
+        
+        # Create a dilated version for visualization
+        dilated_mask = cv2.dilate(mask, erosion_kernel, iterations=1)
+        
+        # Show the original and eroded masks for debugging
+        cv2.imshow('Original Mask', mask)
+        cv2.imshow('Eroded Mask (Used for Comparison)', eroded_mask)
+        cv2.imshow('Dilated Mask (For Visualization)', dilated_mask)
+        
+        return eroded_mask
+    
     def process_image(self, image_path: str):
         # Load the image
         frame = ImageLoader.load_image(image_path)
