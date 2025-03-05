@@ -142,7 +142,6 @@ def main():
     # Create a simple Tkinter root window
     root = tk.Tk()
     root.withdraw()  # Hide the root window
-    
     # Ask the user to select an image file
     file_path = filedialog.askopenfilename(
         title="Select Image File",
