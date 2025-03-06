@@ -51,7 +51,7 @@ class ImagePreprocessor:
         
         return filtered, roi
 
-################################# Suppressible Class ###############################################
+####################################################################################################
 class EdgeDetector:
     """Handles edge and contour detection."""
     @staticmethod
@@ -115,25 +115,43 @@ class CornerDetector:
 class Visualizer:
     """Handles visualization of processing steps."""
     @staticmethod
-    def create_visualization(roi: np.ndarray, display_roi: np.ndarray, edges: np.ndarray, 
-                              thresh: np.ndarray, filtered: np.ndarray) -> np.ndarray:
+    def create_visualization(display_roi: np.ndarray, edges: np.ndarray, 
+                            thresh: np.ndarray, filtered: np.ndarray) -> np.ndarray:
+    
         # Convert single-channel images to 3-channel for concatenation
         edge_display = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
         thresh_display = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
         gray_display = cv2.cvtColor(filtered, cv2.COLOR_GRAY2BGR)
         
+        # Create colormap versions
+        test1 = cv2.applyColorMap(filtered, cv2.COLORMAP_JET)
+        test2 = cv2.applyColorMap(filtered, cv2.COLORMAP_PLASMA)
+        test3 = cv2.applyColorMap(filtered, cv2.COLORMAP_INFERNO)
+        test4 = cv2.applyColorMap(filtered, cv2.COLORMAP_MAGMA)
+        test5 = cv2.applyColorMap(filtered, cv2.COLORMAP_HOT)
+
         # Ensure all images are the same size
         try:
-            top_row = np.hstack([display_roi, edge_display])
-            bottom_row = np.hstack([thresh_display, gray_display])
-            combined_frames = np.vstack([top_row, bottom_row])
-        except ValueError:
-            # Resize if size mismatch
+            # Make sure all images have the same shape before stacking
             h, w = display_roi.shape[:2]
             edge_display = cv2.resize(edge_display, (w, h))
             thresh_display = cv2.resize(thresh_display, (w, h))
             gray_display = cv2.resize(gray_display, (w, h))
+            test1 = cv2.resize(test1, (w, h))
+            test2 = cv2.resize(test2, (w, h))
+            test3 = cv2.resize(test3, (w, h))
+            test4 = cv2.resize(test4, (w, h))
+            test5 = cv2.resize(test5, (w, h))
             
+            # Stack horizontally and vertically using np.hstack and np.vstack
+            top_row = np.hstack([display_roi, edge_display, test1])
+            middle_row = np.hstack([thresh_display, gray_display, test2])
+            bottom_row = np.hstack([test3, test4, test5])
+            combined_frames = np.vstack([top_row, middle_row, bottom_row])
+            
+        except ValueError as e:
+            print(f"Error stacking images: {e}")
+            # Fallback to simpler visualization
             top_row = np.hstack([display_roi, edge_display])
             bottom_row = np.hstack([thresh_display, gray_display])
             combined_frames = np.vstack([top_row, bottom_row])
@@ -380,7 +398,7 @@ class ImagePipeline:
             cv2.circle(display_roi, (int(x), int(y)), 3, (0, 0, 255), -1)
         
         # Create visualization
-        combined_frames = Visualizer.create_visualization(roi, display_roi, edges, thresh, filtered)
+        combined_frames = Visualizer.create_visualization(display_roi, edges, thresh, filtered)
         
         # Display results
         # cv2.imshow('Original Image', frame)
