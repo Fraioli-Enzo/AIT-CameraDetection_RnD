@@ -138,11 +138,11 @@ else:
         elif key == ord('s') and all_corners:
             save_to_dxf(all_corners)
         elif key == ord('i'):
-            pattern_image_count = len([name for name in os.listdir('.') if name.startswith("pattern_image")])
-            save_image(roi_without_border, f"pattern_image{pattern_image_count + 1}.png")
+            pattern_image_count = len([name for name in os.listdir('Images') if name.startswith("pattern")])
+            save_image(roi_without_border, f"Images/pattern_{pattern_image_count + 1}.png")
         elif key == ord('o'):
-            pattern_image_count = len([name for name in os.listdir('.') if name.startswith("anomali_image")])
-            save_image(roi_without_border, f"anomali_image{pattern_image_count + 1}.png")
+            pattern_image_count = len([name for name in os.listdir('Images') if name.startswith("anomali")])
+            save_image(roi_without_border, f"Images/anomali_{pattern_image_count + 1}.png")
         elif key == ord('r'):
             # Print current camera parameters
             print("Current camera parameter values:")

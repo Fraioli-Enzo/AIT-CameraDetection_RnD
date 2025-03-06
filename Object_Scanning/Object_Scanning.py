@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 
 # Load the pre-trained model
-prototxt = 'MobileNetSSD_deploy.prototxt'  # Path to prototxt
-model = 'MobileNetSSD_deploy.caffemodel'  # Path to caffemodel
+prototxt = 'Object_Scanning/MobileNetSSD_deploy.prototxt'  # Path to prototxt
+model = 'Object_Scanning/MobileNetSSD_deploy.caffemodel'  # Path to caffemodel
 net = cv2.dnn.readNetFromCaffe(prototxt, model)
 
 # Open a connection to the camera

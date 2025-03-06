@@ -498,7 +498,7 @@ def main():
         # Image comparison mode (with all features)
         print("\033[93m Select reference image (good/normal image): \033[0m")
         reference_path = filedialog.askopenfilename(
-            title="Select Reference Image",
+            title="Select Pattern Image",
             filetypes=[
                 ("Image files", "*.jpg *.jpeg *.png *.bmp *.tif *.tiff"),
                 ("All files", "*.*")
@@ -509,9 +509,9 @@ def main():
             print("No reference image selected")
             return
             
-        print("\033[93m Select test image (image to check for anomalies): \033[0m")
+        print("\033[93m Select Test/Anomali Image: \033[0m")
         test_path = filedialog.askopenfilename(
-            title="Select Test Image",
+            title="Select Test/Anomali Image",
             filetypes=[
                 ("Image files", "*.jpg *.jpeg *.png *.bmp *.tif *.tiff"),
                 ("All files", "*.*")
@@ -528,7 +528,7 @@ def main():
         # Object-focused comparison mode
         print("\033[93m Select reference image (good/normal image): \033[0m")
         reference_path = filedialog.askopenfilename(
-            title="Select Reference Image",
+            title="Select Pattern Image",
             filetypes=[
                 ("Image files", "*.jpg *.jpeg *.png *.bmp *.tif *.tiff"),
                 ("All files", "*.*")
@@ -539,9 +539,9 @@ def main():
             print("No reference image selected")
             return
             
-        print("\033[93m Select test image (image to check for anomalies): \033[0m")
+        print("\033[93m Select Test/Anomali Image \033[0m")
         test_path = filedialog.askopenfilename(
-            title="Select Test Image",
+            title="Select Test/Anomali Image",
             filetypes=[
                 ("Image files", "*.jpg *.jpeg *.png *.bmp *.tif *.tiff"),
                 ("All files", "*.*")

@@ -193,8 +193,8 @@ def process_dxf(input_dxf, output_dxf, threshold=5, unit='unit'):
     print(f"Polygon saved in {output_dxf}")
 
 # Execution
-input_dxf = "output.dxf"  # Replace with your input file
-output_dxf = "output2.dxf"  # Name of the output file
+input_dxf = "Processing/output.dxf"  # Replace with your input file
+output_dxf = "Processing/output2.dxf"  # Name of the output file
 unit = 'mm'  # Unit of the coordinates of the points in the DXF file
 
 process_dxf(input_dxf, output_dxf, threshold=5, unit=unit)
