@@ -33,6 +33,7 @@ else:
     print("Press 's' to save coordinates to a DXF file.")
     print("Press 'i' to save the current frame as an image.")
     print("Press 'o' to save the current frame as an anomali image.")
+    print("Press 'r' to change camera parameters.")
     while True:
         # Capture frames frame by frame
         ret, frame = cap.read()
@@ -142,7 +143,25 @@ else:
         elif key == ord('o'):
             pattern_image_count = len([name for name in os.listdir('.') if name.startswith("anomali_image")])
             save_image(roi_without_border, f"anomali_image{pattern_image_count + 1}.png")
-
+        elif key == ord('r'):
+            # Print current camera parameters
+            print("Current camera parameter values:")
+            brightness = cap.get(cv2.CAP_PROP_BRIGHTNESS)
+            contrast = cap.get(cv2.CAP_PROP_CONTRAST)
+            gain = cap.get(cv2.CAP_PROP_GAIN)
+            exposure = cap.get(cv2.CAP_PROP_EXPOSURE)
+            
+            print(f"Brightness: {brightness}")
+            print(f"Contrast: {contrast}")
+            print(f"Gain: {gain}")
+            print(f"Exposure: {exposure}")
+            
+            # Now set to new values
+            print("Setting camera to new values...")
+            cap.set(cv2.CAP_PROP_BRIGHTNESS, 20)
+            cap.set(cv2.CAP_PROP_CONTRAST, 5)
+            cap.set(cv2.CAP_PROP_GAIN, -1)
+            cap.set(cv2.CAP_PROP_EXPOSURE, -6)
     # Release the capture when everything is done
     cap.release()
     cv2.destroyAllWindows()
