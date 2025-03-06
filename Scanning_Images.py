@@ -124,11 +124,22 @@ class Visualizer:
         gray_display = cv2.cvtColor(filtered, cv2.COLOR_GRAY2BGR)
         
         # Create colormap versions
-        test1 = cv2.applyColorMap(filtered, cv2.COLORMAP_JET)
-        test2 = cv2.applyColorMap(filtered, cv2.COLORMAP_PLASMA)
-        test3 = cv2.applyColorMap(filtered, cv2.COLORMAP_INFERNO)
-        test4 = cv2.applyColorMap(filtered, cv2.COLORMAP_MAGMA)
-        test5 = cv2.applyColorMap(filtered, cv2.COLORMAP_HOT)
+        jet_display = cv2.applyColorMap(filtered, cv2.COLORMAP_JET)
+        plasma_display = cv2.applyColorMap(filtered, cv2.COLORMAP_PLASMA)
+        inferno_display = cv2.applyColorMap(filtered, cv2.COLORMAP_INFERNO)
+        magma_display = cv2.applyColorMap(filtered, cv2.COLORMAP_MAGMA)
+        hot_display = cv2.applyColorMap(filtered, cv2.COLORMAP_HOT)
+
+        # Add labels to each image
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        cv2.putText(edge_display, "EDGE", (10, 30), font, 0.8, (0, 0, 255), 1)
+        cv2.putText(thresh_display, "THRESH", (10, 30), font, 0.8, (0, 0, 255), 2)
+        cv2.putText(gray_display, "GRAY", (10, 30), font, 0.8, (255, 255, 255), 1)
+        cv2.putText(jet_display, "JET", (10, 30), font, 0.8, (0, 0, 0), 1)
+        cv2.putText(plasma_display, "PLASMA", (10, 30), font, 0.8, (255, 255, 255), 1)
+        cv2.putText(inferno_display, "INFERNO", (10, 30), font, 0.8, (255, 255, 255), 1)
+        cv2.putText(magma_display, "MAGMA", (10, 30), font, 0.8, (255, 255, 255), 1)
+        cv2.putText(hot_display, "HOT", (10, 30), font, 0.8, (255, 255, 255), 1)
 
         # Ensure all images are the same size
         try:
@@ -137,16 +148,16 @@ class Visualizer:
             edge_display = cv2.resize(edge_display, (w, h))
             thresh_display = cv2.resize(thresh_display, (w, h))
             gray_display = cv2.resize(gray_display, (w, h))
-            test1 = cv2.resize(test1, (w, h))
-            test2 = cv2.resize(test2, (w, h))
-            test3 = cv2.resize(test3, (w, h))
-            test4 = cv2.resize(test4, (w, h))
-            test5 = cv2.resize(test5, (w, h))
+            jet_display = cv2.resize(jet_display, (w, h))
+            plasma_display = cv2.resize(plasma_display, (w, h))
+            inferno_display = cv2.resize(inferno_display, (w, h))
+            magma_display = cv2.resize(magma_display, (w, h))
+            hot_display = cv2.resize(hot_display, (w, h))
             
             # Stack horizontally and vertically using np.hstack and np.vstack
-            top_row = np.hstack([display_roi, edge_display, test1])
-            middle_row = np.hstack([thresh_display, gray_display, test2])
-            bottom_row = np.hstack([test3, test4, test5])
+            top_row = np.hstack([display_roi, edge_display, jet_display])
+            middle_row = np.hstack([thresh_display, gray_display, plasma_display])
+            bottom_row = np.hstack([inferno_display, magma_display, hot_display])
             combined_frames = np.vstack([top_row, middle_row, bottom_row])
             
         except ValueError as e:
