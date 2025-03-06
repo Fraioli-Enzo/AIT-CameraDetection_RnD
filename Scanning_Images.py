@@ -243,10 +243,17 @@ class ImageComparator:
         
         # Blend original image with red highlights
         highlighted = cv2.addWeighted(image2, 0.7, red_mask, 0.3, 0)
-        
+        thresh_display = cv2.cvtColor(diff_mask, cv2.COLOR_GRAY2BGR)
+
+        # Add labels to images
+        cv2.putText(image1, "Reference Image", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        cv2.putText(image2, "Test Image", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        cv2.putText(thresh_display, "Difference Mask", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        cv2.putText(highlighted, "Anomalies Highlighted", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
         # Create comparison visualization
         top_row = np.hstack([image1, image2])
-        bottom_row = np.hstack([cv2.cvtColor(diff_mask, cv2.COLOR_GRAY2BGR), highlighted])
+        bottom_row = np.hstack([thresh_display, highlighted])
         comparison = np.vstack([top_row, bottom_row])
         
         return comparison
