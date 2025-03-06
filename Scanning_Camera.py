@@ -141,8 +141,9 @@ else:
             pattern_image_count = len([name for name in os.listdir('Images') if name.startswith("pattern")])
             save_image(roi_without_border, f"Images/pattern_{pattern_image_count + 1}.png")
         elif key == ord('o'):
-            pattern_image_count = len([name for name in os.listdir('Images') if name.startswith("anomali")])
-            save_image(roi_without_border, f"Images/anomali_{pattern_image_count + 1}.png")
+            pattern_image_count_2 = len([name for name in os.listdir('Images') if name.startswith("anomali")])
+            print(f"Anomali image count: {pattern_image_count_2}")
+            save_image(roi_without_border, f"Images/anomali_{pattern_image_count_2 + 1}.png")
         elif key == ord('r'):
             # Print current camera parameters
             print("Current camera parameter values:")
@@ -158,7 +159,7 @@ else:
             
             # Now set to new values
             print("Setting camera to new values...")
-            cap.set(cv2.CAP_PROP_BRIGHTNESS, 20)
+            cap.set(cv2.CAP_PROP_BRIGHTNESS, 50)
             cap.set(cv2.CAP_PROP_CONTRAST, 5)
             cap.set(cv2.CAP_PROP_GAIN, -1)
             cap.set(cv2.CAP_PROP_EXPOSURE, -6)
