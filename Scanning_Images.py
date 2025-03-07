@@ -329,130 +329,39 @@ class ImagePipeline:
         filtered_ref, roi_ref = ImagePreprocessor.preprocess_image(reference_image, self.config)
         filtered_test, roi_test = ImagePreprocessor.preprocess_image(test_image, self.config)
         
-        # Define ranges to test
-        tolerance_values = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
-        blur_effect_values = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+        tolerance = 4
+        blur_effect = 0
+        # Compare preprocessed regions
+        diff_mask, similarity_score = ImageComparator.compare_images(filtered_ref, filtered_test, tolerance, blur_effect)
         
-        best_score = 100.0  # Initialize with worst possible score (100% difference)
-        best_params = (5, 0)  # Default values
-        best_mask = None
-        best_anomalies = []
+        # Detect specific anomalies
+        anomalies = ImageComparator.detect_anomalies(diff_mask, 11)
         
-        results = []  # Store all results for later display
+        # Create visualization
+        comparison_viz = ImageComparator.highlight_anomalies(roi_ref, roi_test, diff_mask)
         
-        # Create a window for parameters
-        cv2.namedWindow('Parameters Testing')
+        # Display results
+        cv2.imshow('Image Comparison', comparison_viz)
         
-        print("\n=== Testing different parameters ===")
-        print("Tolerance | Blur | Anomalies | Difference")
-        print("----------|------|-----------|----------")
+        # Print analysis
+        print(f"Similarity: {100-similarity_score:.2f}% (Difference: {similarity_score:.2f}%)")
+        print(f"Found {len(anomalies)} anomaly regions")
         
-        # Test all combinations
-        for tolerance in tolerance_values:
-            for blur_effect in blur_effect_values:
-                # Compare preprocessed regions with current parameters
-                diff_mask, similarity_score = ImageComparator.compare_images(
-                    filtered_ref, filtered_test, tolerance, blur_effect)
-                
-                # Detect anomalies
-                anomalies = ImageComparator.detect_anomalies(diff_mask, 11)
-                
-                # Store results
-                results.append((tolerance, blur_effect, diff_mask, anomalies, similarity_score))
-                
-                # Print current parameters and results
-                print(f"{tolerance:8} | {blur_effect:4} | {len(anomalies):9} | {similarity_score:.2f}%")
-                
-                # Update best parameters if current score is better
-                if similarity_score < best_score and len(anomalies) > 0:
-                    best_score = similarity_score
-                    best_params = (tolerance, blur_effect)
-                    best_mask = diff_mask.copy()
-                    best_anomalies = anomalies
-                
-                # Create visualization for current parameters
-                comparison_viz = ImageComparator.highlight_anomalies(roi_ref, roi_test, diff_mask)
-                
-                # Add parameter text to visualization
-                cv2.putText(comparison_viz, f"Tolerance: {tolerance}, Blur: {blur_effect}", 
-                        (10, comparison_viz.shape[0] - 10), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
-                cv2.putText(comparison_viz, f"Anomalies: {len(anomalies)}, Difference: {similarity_score:.2f}%", 
-                        (10, comparison_viz.shape[0] - 40), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
-                
-                # Display current result
-                cv2.imshow('Parameters Testing', comparison_viz)
-                
-                # Wait for a short time to see each result (30ms)
-                key = cv2.waitKey(30) & 0xFF
-                if key == ord('q'):
-                    break
-            
-            if key == ord('q'):
-                break
+        for i, ((x, y, w, h), area) in enumerate(anomalies):
+            print(f"Anomaly #{i+1}: Position (x={x}, y={y}), Size {w}x{h}, Area {area:.1f} px")
         
-        print("\n=== Testing completed ===")
-        print(f"Best parameters: Tolerance={best_params[0]}, Blur={best_params[1]}")
-        print(f"Best score: {best_score:.2f}% difference with {len(best_anomalies)} anomalies")
-        
-        # Create visualization with best parameters
-        if best_mask is not None:
-            best_viz = ImageComparator.highlight_anomalies(roi_ref, roi_test, best_mask)
-            cv2.putText(best_viz, f"BEST: Tolerance={best_params[0]}, Blur={best_params[1]}", 
-                    (10, best_viz.shape[0] - 10), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-            cv2.putText(best_viz, f"Anomalies: {len(best_anomalies)}, Difference: {best_score:.2f}%", 
-                    (10, best_viz.shape[0] - 40), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-            cv2.imshow('Best Parameters', best_viz)
-        
-        # Allow interactive review of all results
-        print("\n=== Interactive review mode ===")
-        print("Use left/right arrow keys to cycle through results")
-        print("Press 'b' to see the best result")
-        print("Press 'q' to quit")
-        
-        current_index = 0
-        total_results = len(results)
-        
+        print("\033[91m Press q to close windows / press r to restart program \033[0m")
         while True:
-            # Get current result
-            tolerance, blur_effect, diff_mask, anomalies, similarity_score = results[current_index]
-            
-            # Create visualization
-            comparison_viz = ImageComparator.highlight_anomalies(roi_ref, roi_test, diff_mask)
-            
-            # Add text to visualization
-            cv2.putText(comparison_viz, f"[{current_index+1}/{total_results}] Tolerance: {tolerance}, Blur: {blur_effect}", 
-                    (10, comparison_viz.shape[0] - 10), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
-            cv2.putText(comparison_viz, f"Anomalies: {len(anomalies)}, Difference: {similarity_score:.2f}%", 
-                    (10, comparison_viz.shape[0] - 40), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
-            
-            # Display
-            cv2.imshow('Review Results', comparison_viz)
-            
-            # Wait for key
             key = cv2.waitKey(0) & 0xFF
-            
             if key == ord('q'):
                 break
-            elif key == 83 or key == ord('d'):  # Right arrow or 'd'
-                current_index = (current_index + 1) % total_results
-            elif key == 81 or key == ord('a'):  # Left arrow or 'a'
-                current_index = (current_index - 1) % total_results
-            elif key == ord('b'):  # Show best result
-                if best_mask is not None:
-                    cv2.imshow('Best Parameters', best_viz)
-            elif key == ord('r'):
+            if key == ord('r'):
                 cv2.destroyAllWindows()
                 main()  # Restart the program by calling main() again
                 return
-        
+            
         cv2.destroyAllWindows()
-        return best_anomalies, best_score
+        return anomalies, similarity_score
 
     def compare_objects_only(self, reference_path: str, test_path: str):
         """Compare a test image with a reference image to find anomalies, focusing ONLY on the main object."""
