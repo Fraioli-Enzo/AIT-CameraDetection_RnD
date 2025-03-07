@@ -148,10 +148,10 @@ else:
             break
         elif key == ord('s') and all_corners:
             save_to_dxf(all_corners)
-        elif key == ord('i'):
+        elif key == ord('p'):
             pattern_image_count = len([name for name in os.listdir('Images') if name.startswith("pattern")])
             save_image(roi_without_border, f"Images/pattern_{pattern_image_count + 1}.png")
-        elif key == ord('o'):
+        elif key == ord('i'):
             pattern_image_count_2 = len([name for name in os.listdir('Images') if name.startswith("anomali")])
             print(f"Anomali image count: {pattern_image_count_2}")
             save_image(roi_without_border, f"Images/anomali_{pattern_image_count_2 + 1}.png")

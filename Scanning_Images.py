@@ -180,17 +180,17 @@ class ImageComparator:
     
     @staticmethod
     def compare_images(image1: np.ndarray, image2: np.ndarray, 
-                      threshold: float = 30, 
-                      blur_size: int = 3) -> Tuple[np.ndarray, float]:
+                    threshold: float = 30, 
+                    blur_size: int = 3) -> Tuple[np.ndarray, float]:
         
         # If images is colorful convert images to grayscale
         if len(image1.shape) == 3:
-            gray1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
+            gray1 = cv2.cvtColor(image1, cv2.COLOR_GRAY2BGR)
         else:
             gray1 = image1
             
         if len(image2.shape) == 3:
-            gray2 = cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
+            gray2 = cv2.cvtColor(image2, cv2.COLOR_GRAY2BGR)
         else:
             gray2 = image2
         
@@ -198,30 +198,66 @@ class ImageComparator:
         if gray1.shape != gray2.shape:
             gray2 = cv2.resize(gray2, (gray1.shape[1], gray1.shape[0]))
         
-        # Display the grayscale images for comparison
-        cv2.imshow('Reference Image (Grayscale)', gray1)
-        cv2.imshow('Test Image (Grayscale)', gray2)
+        # Apply bilateral filter to both images BEFORE calculating differences
+        if blur_size > 0:
+            # For bilateral filter parameters
+            d = blur_size       # Diameter of each pixel neighborhood
+            sigma_color = 10    # Filter sigma in the color space
+            sigma_space = 10    # Filter sigma in the coordinate space
+            
+            # Apply bilateral filter to both grayscale images
+            gray1_filtered = cv2.bilateralFilter(gray1, d, sigma_color, sigma_space)
+            gray2_filtered = cv2.bilateralFilter(gray2, d, sigma_color, sigma_space)
+        else:
+            # No blur applied
+            gray1_filtered = gray1
+            gray2_filtered = gray2
+        
+        # Create a 2x3 grid displaying the original and filtered images
+        # Convert all images to BGR if they're grayscale for proper concatenation
+        gray1_bgr = cv2.cvtColor(gray1, cv2.COLOR_GRAY2BGR)
+        gray2_bgr = cv2.cvtColor(gray2, cv2.COLOR_GRAY2BGR)
+        gray1_filtered_bgr = cv2.cvtColor(gray1_filtered, cv2.COLOR_GRAY2BGR)
+        gray2_filtered_bgr = cv2.cvtColor(gray2_filtered, cv2.COLOR_GRAY2BGR)
+        
+        # Add labels to each image
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        cv2.putText(gray1_bgr, "Gray Reference", (10, 30), font, 0.7, (0, 255, 0), 2)
+        cv2.putText(gray2_bgr, "Gray Test", (10, 30), font, 0.7, (0, 255, 0), 2)
+        cv2.putText(gray1_filtered_bgr, "Filtered Reference", (10, 30), font, 0.7, (0, 255, 0), 2)
+        cv2.putText(gray2_filtered_bgr, "Filtered Test", (10, 30), font, 0.7, (0, 255, 0), 2)
+        
+        # Create rows and then combine into final display
+        middle_row = np.hstack([gray1_bgr, gray2_bgr])
+        bottom_row = np.hstack([gray1_filtered_bgr, gray2_filtered_bgr])
+        
+        # Stack the rows vertically
+        comparison_grid = np.vstack([middle_row, bottom_row])
+        
+        # Display the grid
+        cv2.imshow('Image Processing Steps', comparison_grid)
+
         print("\033[91m Press q to close windows\033[0m")
         key = cv2.waitKey(0) & 0xFF
         if key == ord('q'):
             cv2.destroyAllWindows()
 
-        # Compute absolute difference between the images
-        diff = cv2.absdiff(gray1, gray2)
+        # Compute absolute difference between the FILTERED images
+        diff = cv2.absdiff(gray1_filtered, gray2_filtered)
         
         # Apply threshold to highlight significant differences
         _, thresholded_diff = cv2.threshold(diff, threshold, 255, cv2.THRESH_BINARY)
         
-        # Apply Gaussian blur to reduce noise
-        blurred_diff = cv2.GaussianBlur(thresholded_diff, (blur_size, blur_size), 0)
+        # No need for additional filtering here since we already filtered the input images
+        filtered_diff = thresholded_diff
         
         # Calculate similarity score (lower means more similar)
         # Normalized by image size to get percentage
-        non_zero = np.count_nonzero(blurred_diff)
+        non_zero = np.count_nonzero(filtered_diff)
         total_pixels = gray1.size
         similarity_score = (non_zero / total_pixels) * 100
         
-        return blurred_diff, similarity_score
+        return filtered_diff, similarity_score
     
     @staticmethod
     def detect_anomalies(diff_mask: np.ndarray, 
@@ -294,7 +330,7 @@ class ImagePipeline:
         filtered_test, roi_test = ImagePreprocessor.preprocess_image(test_image, self.config)
         
         # Compare preprocessed regions
-        diff_mask, similarity_score = ImageComparator.compare_images(filtered_ref, filtered_test)
+        diff_mask, similarity_score = ImageComparator.compare_images(filtered_ref, filtered_test, 5, 0)
         
         # Detect specific anomalies
         anomalies = ImageComparator.detect_anomalies(diff_mask, 11)
