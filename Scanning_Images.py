@@ -483,7 +483,7 @@ class ImagePipeline:
         filtered_ref, roi_ref = ImagePreprocessor.preprocess_image(reference_image, self.config)
         filtered_test, roi_test = ImagePreprocessor.preprocess_image(test_image, self.config)
         
-        tolerance = 4
+        tolerance = 6
         blur_effect = 0
         # Compare preprocessed regions
         diff_mask, similarity_score = ImageComparator.compare_images(filtered_ref, filtered_test, tolerance, blur_effect)
