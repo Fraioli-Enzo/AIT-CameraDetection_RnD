@@ -57,8 +57,8 @@ else:
         # Convert the ROI to grayscale
         gray_frame = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         
-        # Apply bilateral filter to reduce noise while preserving edges
-        filtered = cv2.bilateralFilter(gray_frame, 9, 75, 75)
+        # Remove bilateral filter - use grayscale directly
+        filtered = gray_frame.copy()  # No blur, just use the grayscale image directly
         
         # Apply adaptive thresholding with MEAN method (less blurry than Gaussian)
         thresh = cv2.adaptiveThreshold(filtered, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
@@ -121,9 +121,20 @@ else:
         gray_display = cv2.cvtColor(filtered, cv2.COLOR_GRAY2BGR)
         
         # Stack displays horizontally
-        top_row = np.concat([display_roi, edge_display])
-        bottom_row = np.concat([thresh_display, gray_display])
-        combined = np.concat([top_row, bottom_row])
+        try:
+            top_row = np.hstack([display_roi, edge_display])
+            bottom_row = np.hstack([thresh_display, gray_display])
+            combined = np.vstack([top_row, bottom_row])
+        except ValueError:
+            # Handle potential shape mismatch
+            h, w = display_roi.shape[:2]
+            edge_display = cv2.resize(edge_display, (w, h))
+            thresh_display = cv2.resize(thresh_display, (w, h))
+            gray_display = cv2.resize(gray_display, (w, h))
+            
+            top_row = np.hstack([display_roi, edge_display])
+            bottom_row = np.hstack([thresh_display, gray_display])
+            combined = np.vstack([top_row, bottom_row])
         
         # Resize for display
         combined = cv2.resize(combined, (0, 0), fx=1, fy=1)
@@ -145,7 +156,7 @@ else:
             print(f"Anomali image count: {pattern_image_count_2}")
             save_image(roi_without_border, f"Images/anomali_{pattern_image_count_2 + 1}.png")
         elif key == ord('r'):
-            # Print current camera parameters
+ 
             print("Current camera parameter values:")
             brightness = cap.get(cv2.CAP_PROP_BRIGHTNESS)
             contrast = cap.get(cv2.CAP_PROP_CONTRAST)
@@ -158,9 +169,8 @@ else:
             print(f"Exposure: {exposure}")
             
             # Now set to new values
-            print("Setting camera to new values...")
-            cap.set(cv2.CAP_PROP_BRIGHTNESS, 50)
-            cap.set(cv2.CAP_PROP_CONTRAST, 5)
+            cap.set(cv2.CAP_PROP_BRIGHTNESS, 20)
+            cap.set(cv2.CAP_PROP_CONTRAST, 2)
             cap.set(cv2.CAP_PROP_GAIN, -1)
             cap.set(cv2.CAP_PROP_EXPOSURE, -6)
     # Release the capture when everything is done
