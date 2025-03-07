@@ -50,6 +50,110 @@ class ImagePreprocessor:
         )
         
         return filtered, roi
+    
+    @staticmethod
+    def divide_image_into_four(image: np.ndarray) -> List[np.ndarray]:
+        if image is None:
+            print("Error: No image provided")
+            return []
+        
+        height, width = image.shape[:2]
+        
+        # Calculer les points médians
+        mid_h = height // 2
+        mid_w = width // 2
+        
+        # Extraire les quatre quadrants
+        top_left = image[:mid_h, :mid_w].copy()
+        top_right = image[:mid_h, mid_w:].copy()
+        bottom_left = image[mid_h:, :mid_w].copy()
+        bottom_right = image[mid_h:, mid_w:].copy()
+        
+        # Créer une visualisation des quadrants pour le débogage
+        # (facultatif, vous pouvez supprimer cette partie)
+        vis_top = np.hstack([top_left, top_right])
+        vis_bottom = np.hstack([bottom_left, bottom_right])
+        visualization = np.vstack([vis_top, vis_bottom])
+        
+        # Ajouter des étiquettes pour l'identification
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        if len(image.shape) == 3:  # Image en couleur
+            cv2.putText(visualization, "TL", (10, 30), font, 0.7, (0, 255, 0), 2)
+            cv2.putText(visualization, "TR", (mid_w + 10, 30), font, 0.7, (0, 255, 0), 2)
+            cv2.putText(visualization, "BL", (10, mid_h + 30), font, 0.7, (0, 255, 0), 2)
+            cv2.putText(visualization, "BR", (mid_w + 10, mid_h + 30), font, 0.7, (0, 255, 0), 2)
+        
+        # Afficher la visualisation
+        cv2.imshow('Image divided into four quadrants', visualization)
+        print("\033[91m Press q to close windows \033[0m")
+        while True:
+            key = cv2.waitKey(0) & 0xFF
+            if key == ord('q'):
+                break
+            
+        cv2.destroyAllWindows()
+        
+        return [top_left, top_right, bottom_left, bottom_right]
+    
+    def _extract_main_object(self, image: np.ndarray) -> np.ndarray:
+        """Extract the main object from the image, returning a binary mask with eroded edges to avoid edge noise."""
+        # Ensure image is grayscale
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image.copy()
+        
+        # Apply adaptive thresholding to separate foreground from background
+        thresh = cv2.adaptiveThreshold(
+            gray, 255,
+            self.config.adaptive_thresh_method,
+            self.config.adaptive_thresh_type,
+            self.config.adaptive_block_size,
+            self.config.adaptive_const
+        )
+        
+        # Apply morphological operations to clean up the mask
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        cleaned = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+        cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_OPEN, kernel)
+        
+        # Find contours
+        contours, _ = cv2.findContours(cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # If no contours found, return the original threshold
+        if not contours:
+            return thresh
+        
+        # Create an empty mask
+        mask = np.zeros_like(gray)
+        
+        # Find the largest contour (assume it's the main object)
+        largest_contour = max(contours, key=cv2.contourArea)
+        
+        # Draw the largest contour
+        cv2.drawContours(mask, [largest_contour], 0, 255, -1)
+        
+        # Optional: Fill holes in the mask
+        mask_floodfill = mask.copy()
+        h, w = mask.shape[:2]
+        mask_zero = np.zeros((h+2, w+2), np.uint8)
+        cv2.floodFill(mask_floodfill, mask_zero, (0, 0), 255)
+        mask_floodfill_inv = cv2.bitwise_not(mask_floodfill)
+        mask = mask | mask_floodfill_inv
+        
+        # Create an eroded version to avoid edge noise
+        erosion_kernel = np.ones((3, 3), np.uint8)
+        eroded_mask = cv2.erode(mask, erosion_kernel, iterations=2)
+        
+        # Create a dilated version for visualization
+        dilated_mask = cv2.dilate(mask, erosion_kernel, iterations=1)
+        
+        # Show the original and eroded masks for debugging
+        cv2.imshow('Original Mask', mask)
+        cv2.imshow('Eroded Mask (Used for Comparison)', eroded_mask)
+        cv2.imshow('Dilated Mask (For Visualization)', dilated_mask)
+        
+        return eroded_mask
 
 ####################################################################################################
 class EdgeDetector:
@@ -315,116 +419,7 @@ class ImagePipeline:
     def __init__(self, config: Optional[ImageProcessingConfig] = None):
         self.config = config or ImageProcessingConfig()
     
-    def compare_with_reference(self, reference_path: str, test_path: str):
-        """Compare a test image with a reference image to find anomalies."""
-        # Load images
-        reference_image = ImageLoader.load_image(reference_path)
-        test_image = ImageLoader.load_image(test_path)
-        
-        if reference_image is None or test_image is None:
-            print("Error loading one or both images")
-            return None
-        
-        # Preprocess both images the same way
-        filtered_ref, roi_ref = ImagePreprocessor.preprocess_image(reference_image, self.config)
-        filtered_test, roi_test = ImagePreprocessor.preprocess_image(test_image, self.config)
-        
-        tolerance = 4
-        blur_effect = 0
-        # Compare preprocessed regions
-        diff_mask, similarity_score = ImageComparator.compare_images(filtered_ref, filtered_test, tolerance, blur_effect)
-        
-        # Detect specific anomalies
-        anomalies = ImageComparator.detect_anomalies(diff_mask, 11)
-        
-        # Create visualization
-        comparison_viz = ImageComparator.highlight_anomalies(roi_ref, roi_test, diff_mask)
-        
-        # Display results
-        cv2.imshow('Image Comparison', comparison_viz)
-        
-        # Print analysis
-        print(f"Similarity: {100-similarity_score:.2f}% (Difference: {similarity_score:.2f}%)")
-        print(f"Found {len(anomalies)} anomaly regions")
-        
-        for i, ((x, y, w, h), area) in enumerate(anomalies):
-            print(f"Anomaly #{i+1}: Position (x={x}, y={y}), Size {w}x{h}, Area {area:.1f} px")
-        
-        print("\033[91m Press q to close windows / press r to restart program \033[0m")
-        while True:
-            key = cv2.waitKey(0) & 0xFF
-            if key == ord('q'):
-                break
-            if key == ord('r'):
-                cv2.destroyAllWindows()
-                main()  # Restart the program by calling main() again
-                return
-            
-        cv2.destroyAllWindows()
-        return anomalies, similarity_score
-
-    def compare_objects_only(self, reference_path: str, test_path: str):
-        """Compare a test image with a reference image to find anomalies, focusing ONLY on the main object."""
-        # Load images
-        reference_image = ImageLoader.load_image(reference_path)
-        test_image = ImageLoader.load_image(test_path)
-        
-        if reference_image is None or test_image is None:
-            print("Error loading one or both images")
-            return None
-        
-        # Preprocess both images the same way
-        filtered_ref, roi_ref = ImagePreprocessor.preprocess_image(reference_image, self.config)
-        filtered_test, roi_test = ImagePreprocessor.preprocess_image(test_image, self.config)
-        
-        # 1. Extract the main object in both images
-        ref_mask = self._extract_main_object(filtered_ref)
-        test_mask = self._extract_main_object(filtered_test)
-        
-        # 2. Apply masks to original images
-        ref_object = cv2.bitwise_and(roi_ref, roi_ref, mask=ref_mask)
-        test_object = cv2.bitwise_and(roi_test, roi_test, mask=test_mask)
-        
-        # 3. Compare only the masked regions
-        diff_mask, similarity_score = ImageComparator.compare_images(ref_object, test_object)
-        
-        # 4. Apply additional filtering to remove small anomalies
-        kernel = np.ones((3, 3), np.uint8)
-        filtered_diff_mask = cv2.morphologyEx(diff_mask, cv2.MORPH_OPEN, kernel)
-        
-        # 5. Apply strong erosion to focus only on significant center anomalies
-        erosion_kernel = np.ones((5, 5), np.uint8)
-        center_diff_mask = cv2.erode(filtered_diff_mask, erosion_kernel, iterations=3)
-        
-        # Detect specific anomalies with higher threshold
-        anomalies = ImageComparator.detect_anomalies(center_diff_mask, min_area=10)
-        
-        # Create visualization
-        comparison_viz = ImageComparator.highlight_anomalies(ref_object, test_object, center_diff_mask)
-        
-        # Display results
-        cv2.imshow('Objects Only Comparison', comparison_viz)
-        
-        # Print analysis
-        print(f"Similarity: {100-similarity_score:.2f}% (Difference: {similarity_score:.2f}%)")
-        print(f"Found {len(anomalies)} significant anomaly regions in the center of the object")
-        
-        for i, ((x, y, w, h), area) in enumerate(anomalies):
-            print(f"Anomaly #{i+1}: Position (x={x}, y={y}), Size {w}x{h}, Area {area:.1f} px")
-        
-        print("\033[91m Press q to close windows / press r to restart program \033[0m")
-        while True:
-            key = cv2.waitKey(0) & 0xFF
-            if key == ord('q'):
-                break
-            if key == ord('r'):
-                cv2.destroyAllWindows()
-                main()  # Restart the program by calling main() again
-                return
-            
-        cv2.destroyAllWindows()
-        return anomalies, similarity_score
-
+    # Key 1 
     def process_image(self, image_path: str):
         # Load the image
         frame = ImageLoader.load_image(image_path)
@@ -473,67 +468,284 @@ class ImagePipeline:
         cv2.destroyAllWindows()
         return all_corners
 
-    def _extract_main_object(self, image: np.ndarray) -> np.ndarray:
-        """Extract the main object from the image, returning a binary mask with eroded edges to avoid edge noise."""
-        # Ensure image is grayscale
-        if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        else:
-            gray = image.copy()
+    # Key 2
+    def compare_with_reference(self, reference_path: str, test_path: str):
+        """Compare a test image with a reference image to find anomalies."""
+        # Load images
+        reference_image = ImageLoader.load_image(reference_path)
+        test_image = ImageLoader.load_image(test_path)
         
-        # Apply adaptive thresholding to separate foreground from background
-        thresh = cv2.adaptiveThreshold(
-            gray, 255,
-            self.config.adaptive_thresh_method,
-            self.config.adaptive_thresh_type,
-            self.config.adaptive_block_size,
-            self.config.adaptive_const
-        )
+        if reference_image is None or test_image is None:
+            print("Error loading one or both images")
+            return None
         
-        # Apply morphological operations to clean up the mask
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-        cleaned = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
-        cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_OPEN, kernel)
+        # Preprocess both images the same way
+        filtered_ref, roi_ref = ImagePreprocessor.preprocess_image(reference_image, self.config)
+        filtered_test, roi_test = ImagePreprocessor.preprocess_image(test_image, self.config)
         
-        # Find contours
-        contours, _ = cv2.findContours(cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        tolerance = 4
+        blur_effect = 0
+        # Compare preprocessed regions
+        diff_mask, similarity_score = ImageComparator.compare_images(filtered_ref, filtered_test, tolerance, blur_effect)
         
-        # If no contours found, return the original threshold
-        if not contours:
-            return thresh
+        # Detect specific anomalies
+        anomalies = ImageComparator.detect_anomalies(diff_mask, 11)
         
-        # Create an empty mask
-        mask = np.zeros_like(gray)
+        # Create visualization
+        comparison_viz = ImageComparator.highlight_anomalies(roi_ref, roi_test, diff_mask)
         
-        # Find the largest contour (assume it's the main object)
-        largest_contour = max(contours, key=cv2.contourArea)
+        # Display results
+        cv2.imshow('Image Comparison', comparison_viz)
         
-        # Draw the largest contour
-        cv2.drawContours(mask, [largest_contour], 0, 255, -1)
+        # Print analysis
+        print(f"Similarity: {100-similarity_score:.2f}% (Difference: {similarity_score:.2f}%)")
+        print(f"Found {len(anomalies)} anomaly regions")
         
-        # Optional: Fill holes in the mask
-        mask_floodfill = mask.copy()
-        h, w = mask.shape[:2]
-        mask_zero = np.zeros((h+2, w+2), np.uint8)
-        cv2.floodFill(mask_floodfill, mask_zero, (0, 0), 255)
-        mask_floodfill_inv = cv2.bitwise_not(mask_floodfill)
-        mask = mask | mask_floodfill_inv
+        for i, ((x, y, w, h), area) in enumerate(anomalies):
+            print(f"Anomaly #{i+1}: Position (x={x}, y={y}), Size {w}x{h}, Area {area:.1f} px")
         
-        # Create an eroded version to avoid edge noise
-        erosion_kernel = np.ones((3, 3), np.uint8)
-        eroded_mask = cv2.erode(mask, erosion_kernel, iterations=2)
-        
-        # Create a dilated version for visualization
-        dilated_mask = cv2.dilate(mask, erosion_kernel, iterations=1)
-        
-        # Show the original and eroded masks for debugging
-        cv2.imshow('Original Mask', mask)
-        cv2.imshow('Eroded Mask (Used for Comparison)', eroded_mask)
-        cv2.imshow('Dilated Mask (For Visualization)', dilated_mask)
-        
-        return eroded_mask
+        print("\033[91m Press q to close windows / press r to restart program \033[0m")
+        while True:
+            key = cv2.waitKey(0) & 0xFF
+            if key == ord('q'):
+                break
+            if key == ord('r'):
+                cv2.destroyAllWindows()
+                main()  # Restart the program by calling main() again
+                return
+            
+        cv2.destroyAllWindows()
+        return anomalies, similarity_score
     
+    # Key 3
+    def compare_objects_only(self, reference_path: str, test_path: str):
+        """Compare a test image with a reference image to find anomalies, focusing ONLY on the main object."""
+        # Load images
+        reference_image = ImageLoader.load_image(reference_path)
+        test_image = ImageLoader.load_image(test_path)
+        
+        if reference_image is None or test_image is None:
+            print("Error loading one or both images")
+            return None
+        
+        # Preprocess both images the same way
+        filtered_ref, roi_ref = ImagePreprocessor.preprocess_image(reference_image, self.config)
+        filtered_test, roi_test = ImagePreprocessor.preprocess_image(test_image, self.config)
+        
+        # 1. Extract the main object in both images
+        ref_mask = ImagePreprocessor._extract_main_object(filtered_ref)
+        test_mask = ImagePreprocessor._extract_main_object(filtered_test)
+        
+        # 2. Apply masks to original images
+        ref_object = cv2.bitwise_and(roi_ref, roi_ref, mask=ref_mask)
+        test_object = cv2.bitwise_and(roi_test, roi_test, mask=test_mask)
+        
+        # 3. Compare only the masked regions
+        diff_mask, similarity_score = ImageComparator.compare_images(ref_object, test_object)
+        
+        # 4. Apply additional filtering to remove small anomalies
+        kernel = np.ones((3, 3), np.uint8)
+        filtered_diff_mask = cv2.morphologyEx(diff_mask, cv2.MORPH_OPEN, kernel)
+        
+        # 5. Apply strong erosion to focus only on significant center anomalies
+        erosion_kernel = np.ones((5, 5), np.uint8)
+        center_diff_mask = cv2.erode(filtered_diff_mask, erosion_kernel, iterations=3)
+        
+        # Detect specific anomalies with higher threshold
+        anomalies = ImageComparator.detect_anomalies(center_diff_mask, min_area=10)
+        
+        # Create visualization
+        comparison_viz = ImageComparator.highlight_anomalies(ref_object, test_object, center_diff_mask)
+        
+        # Display results
+        cv2.imshow('Objects Only Comparison', comparison_viz)
+        
+        # Print analysis
+        print(f"Similarity: {100-similarity_score:.2f}% (Difference: {similarity_score:.2f}%)")
+        print(f"Found {len(anomalies)} significant anomaly regions in the center of the object")
+        
+        for i, ((x, y, w, h), area) in enumerate(anomalies):
+            print(f"Anomaly #{i+1}: Position (x={x}, y={y}), Size {w}x{h}, Area {area:.1f} px")
+        
+        print("\033[91m Press q to close windows / press r to restart program \033[0m")
+        while True:
+            key = cv2.waitKey(0) & 0xFF
+            if key == ord('q'):
+                break
+            if key == ord('r'):
+                cv2.destroyAllWindows()
+                main()  # Restart the program by calling main() again
+                return
+            
+        cv2.destroyAllWindows()
+        return anomalies, similarity_score
 
+    # Key 4
+    def analyse_multiple_images(self, image_path: str):
+        image = ImageLoader.load_image(image_path)
+        if image is None:
+            print("Error loading image")
+            return None
+            
+        # Diviser l'image en quatre quadrants
+        quadrants = ImagePreprocessor.divide_image_into_four(image)
+        if len(quadrants) != 4:
+            print("Failed to divide image into quadrants")
+            return None
+            
+        print("\n=== Analysing quadrant similarities ===")
+        
+        # Comparer chaque quadrant avec les autres
+        similarities = []
+        for i in range(len(quadrants)):
+            for j in range(i+1, len(quadrants)):
+                # Prétraiter les deux quadrants
+                filtered_i, _ = ImagePreprocessor.preprocess_image(quadrants[i], self.config)
+                filtered_j, _ = ImagePreprocessor.preprocess_image(quadrants[j], self.config)
+                
+                # Calculer la similarité
+                tolerance = 4  # Valeur de seuil pour les différences
+                blur_size = 0  # Taille du flou pour réduire le bruit
+                _, similarity_score = ImageComparator.compare_images(filtered_i, filtered_j, tolerance, blur_size)
+                
+                # Enregistrer les résultats
+                quad_names = ["Top-Left", "Top-Right", "Bottom-Left", "Bottom-Right"]
+                similarities.append({
+                    'pair': (i, j),
+                    'names': (quad_names[i], quad_names[j]),
+                    'score': similarity_score
+                })
+                print(f"Similarity between {quad_names[i]} and {quad_names[j]}: {100-similarity_score:.2f}% (Diff: {similarity_score:.2f}%)")
+        
+        # Déterminer les groupes en fonction des scores de similarité
+        similarity_threshold = 0.5  # Seuil pour considérer deux images comme similaires
+        groups = []
+        outliers = []
+        processed_indices = set()
+        
+        # Trier les similarités
+        similarities.sort(key=lambda x: x['score'])
+        
+        # Créer des groupes basés sur la similarité
+        for sim in similarities:
+            i, j = sim['pair']
+            score = sim['score']
+            
+            # Si la différence est faible, les deux quadrants sont similaires
+            if score < similarity_threshold:
+                # Chercher si l'un des quadrants est déjà dans un groupe
+                found_group = False
+                for group in groups:
+                    if i in group or j in group:
+                        # Ajouter l'autre quadrant au groupe
+                        group.add(i)
+                        group.add(j)
+                        processed_indices.add(i)
+                        processed_indices.add(j)
+                        found_group = True
+                        break
+                
+                # Si aucun des deux n'est dans un groupe, créer un nouveau groupe
+                if not found_group:
+                    groups.append(set([i, j]))
+                    processed_indices.add(i)
+                    processed_indices.add(j)
+            else:
+                # Pour les dissimilarités significatives, noter pour analyse
+                if i not in processed_indices:
+                    outliers.append(i)
+                    processed_indices.add(i)
+                if j not in processed_indices:
+                    outliers.append(j)
+                    processed_indices.add(j)
+        
+        # Vérifier s'il y a des indices non traités (0,1,2,3)
+        for i in range(4):
+            if i not in processed_indices:
+                outliers.append(i)
+        
+        # Afficher les résultats
+        quad_names = ["Top-Left", "Top-Right", "Bottom-Left", "Bottom-Right"]
+        
+        print("\n=== Grouping Results ===")
+        print(f"Found {len(groups)} groups of similar quadrants:")
+        for i, group in enumerate(groups):
+            group_indices = sorted(list(group))
+            group_names = [quad_names[idx] for idx in group_indices]
+            print(f"  Group {i+1}: {', '.join(group_names)}")
+        
+        print(f"\nFound {len(outliers)} outlier quadrants:")
+        for idx in outliers:
+            print(f"  Outlier: {quad_names[idx]}")
+        
+        # Visualiser les groupes
+        # Créer une image de sortie montrant les groupes avec des couleurs différentes
+        output_img = image.copy()
+        height, width = image.shape[:2]
+        mid_h = height // 2
+        mid_w = width // 2
+        
+        # Couleurs pour les groupes (BGR)
+        group_colors = [
+            (0, 255, 0),    # Vert
+            (0, 255, 255),  # Jaune
+            (255, 0, 0),    # Bleu
+            (255, 0, 255)   # Magenta
+        ]
+        
+        # Couleur pour les outliers
+        outlier_color = (0, 0, 255)  # Rouge
+        
+        # Dessiner des rectangles colorés pour les groupes
+        positions = [
+            (0, 0, mid_w, mid_h),         # Top-Left
+            (mid_w, 0, width, mid_h),     # Top-Right
+            (0, mid_h, mid_w, height),    # Bottom-Left
+            (mid_w, mid_h, width, height) # Bottom-Right
+        ]
+        
+        # Dessiner d'abord les groupes
+        for i, group in enumerate(groups):
+            color = group_colors[i % len(group_colors)]
+            for idx in group:
+                x, y, x2, y2 = positions[idx]
+                cv2.rectangle(output_img, (x+5, y+5), (x2-5, y2-5), color, 3)
+                cv2.putText(output_img, f"Group {i+1}", (x+15, y+30), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+        
+        # Dessiner les outliers
+        for idx in outliers:
+            x, y, x2, y2 = positions[idx]
+            cv2.rectangle(output_img, (x+5, y+5), (x2-5, y2-5), outlier_color, 3)
+            cv2.putText(output_img, "Outlier", (x+15, y+30), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, outlier_color, 1)
+        
+        # Afficher le résultat
+        cv2.imshow("Quadrant Groups Analysis", output_img)
+        
+        print("\n\033[91m Press 'q' to close windows / 'r' to restart program \033[0m")
+        while True:
+            key = cv2.waitKey(0) & 0xFF
+            if key == ord('q'):
+                break
+            if key == ord('r'):
+                cv2.destroyAllWindows()
+                main()  # Redémarrer le programme
+                return None
+        
+        cv2.destroyAllWindows()
+        
+        # Retourner les résultats pour une utilisation ultérieure
+        return {
+            'quadrants': quadrants,
+            'groups': [list(group) for group in groups],
+            'outliers': outliers,
+            'similarities': similarities
+        }
+
+
+
+####################################################################################################
 def main():
     """Main function to select and process images."""
     # Create a simple Tkinter root window
@@ -548,8 +760,9 @@ def main():
     print("1. Detect corners in a single image")
     print("2. Compare two images to find anomalies")
     print("3. Compare two images focusing only on the main object")
-    
-    choice = input("Enter your choice (1, 2 or 3): ")
+    print("4. Analyze image by dividing it into four quadrants")
+
+    choice = input("Enter your choice (1, 2, 3 or 4): ")
     
     if choice == '1':
         # Single image processing
@@ -627,6 +840,23 @@ def main():
             return
             
         pipeline.compare_objects_only(reference_path, test_path)
+    
+    elif choice == '4':
+        # Quadrant analysis mode
+        file_path = filedialog.askopenfilename(
+            title="Select Image File for Quadrant Analysis",
+            filetypes=[
+                ("Image files", "*.jpg *.jpeg *.png *.bmp *.tif *.tiff"),
+                ("All files", "*.*")
+            ]
+        )
+        
+        if file_path:
+            results = pipeline.analyse_multiple_images(file_path)
+            if not results:
+                print("Analysis failed or no results generated")
+        else:
+            print("No file selected")
     else:
         print("Invalid choice")
 
