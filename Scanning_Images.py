@@ -300,7 +300,7 @@ class ImageComparator:
         # Add labels to images
         cv2.putText(image1, "Reference Image", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         cv2.putText(image2, "Test Image", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(thresh_display, "Difference Mask", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        cv2.putText(thresh_display, "Difference Mask", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
         cv2.putText(highlighted, "Anomalies Highlighted", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
         # Create comparison visualization
@@ -329,8 +329,10 @@ class ImagePipeline:
         filtered_ref, roi_ref = ImagePreprocessor.preprocess_image(reference_image, self.config)
         filtered_test, roi_test = ImagePreprocessor.preprocess_image(test_image, self.config)
         
+        tolerance = 5
+        blur_effect = 0
         # Compare preprocessed regions
-        diff_mask, similarity_score = ImageComparator.compare_images(filtered_ref, filtered_test, 5, 0)
+        diff_mask, similarity_score = ImageComparator.compare_images(filtered_ref, filtered_test, tolerance, blur_effect)
         
         # Detect specific anomalies
         anomalies = ImageComparator.detect_anomalies(diff_mask, 11)
