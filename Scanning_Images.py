@@ -8,16 +8,16 @@ from typing import List, Tuple, Optional
 @dataclass
 class ImageProcessingConfig:
     """Configuration parameters for image processing."""
-    bilateral_filter_diameter: int = 9
-    bilateral_sigma_color: float = 75
-    bilateral_sigma_space: float = 75
+    bilateral_filter_diameter: int = 5
+    bilateral_sigma_color: float = 50
+    bilateral_sigma_space: float = 50
     adaptive_thresh_method: int = cv2.ADAPTIVE_THRESH_MEAN_C
     adaptive_thresh_type: int = cv2.THRESH_BINARY_INV
     adaptive_block_size: int = 15
     adaptive_const: float = 2
-    canny_threshold1: float = 50
-    canny_threshold2: float = 150
-    min_contour_area: float = 100
+    canny_threshold1: float = 25
+    canny_threshold2: float = 250
+    min_contour_area: float = 20
     max_corners: int = 25
     corner_quality_level: float = 0.01
     corner_min_distance: float = 10
@@ -155,8 +155,7 @@ class ImagePreprocessor:
         
         return eroded_mask
 
-####################################################################################################
-class EdgeDetector:
+class BasicImageProcess:
     """Handles edge and contour detection."""
     @staticmethod
     def detect_edges_and_contours(filtered_image: np.ndarray, config: ImageProcessingConfig) -> Tuple[np.ndarray, np.ndarray, List[np.ndarray]]:
@@ -182,7 +181,6 @@ class EdgeDetector:
         
         return thresh, edges, valid_contours
 
-class CornerDetector:
     """Detects corners in the image."""
     @staticmethod
     def detect_corners(gray_frame: np.ndarray, contours: List[np.ndarray], config: ImageProcessingConfig) -> List[np.ndarray]:
@@ -216,7 +214,6 @@ class CornerDetector:
         
         return all_corners
 
-class Visualizer:
     """Handles visualization of processing steps."""
     @staticmethod
     def create_visualization(display_roi: np.ndarray, edges: np.ndarray, 
@@ -278,10 +275,8 @@ class Visualizer:
         
         return combined_frames
 
-####################################################################################################
 class ImageComparator:
     """Handles comparison between two images to detect anomalies."""
-    
     @staticmethod
     def compare_images(image1: np.ndarray, image2: np.ndarray, 
                     threshold: float = 30, 
@@ -420,7 +415,7 @@ class ImagePipeline:
         self.config = config or ImageProcessingConfig()
     
     # Key 1 
-    def process_image(self, image_path: str):
+    def basic_simple_image_process(self, image_path: str):
         # Load the image
         frame = ImageLoader.load_image(image_path)
         if frame is None:
@@ -430,14 +425,14 @@ class ImagePipeline:
         filtered, roi = ImagePreprocessor.preprocess_image(frame, self.config)
         
         # Detect edges and contours
-        thresh, edges, valid_contours = EdgeDetector.detect_edges_and_contours(filtered, self.config)
+        thresh, edges, valid_contours = BasicImageProcess.detect_edges_and_contours(filtered, self.config)
         
         # Create display image with contours
         display_roi = roi.copy()
         cv2.drawContours(display_roi, valid_contours, -1, (0, 255, 0), 1)
         
         # Detect corners
-        all_corners = CornerDetector.detect_corners(
+        all_corners = BasicImageProcess.detect_corners(
             cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY), 
             valid_contours, 
             self.config
@@ -449,7 +444,7 @@ class ImagePipeline:
             cv2.circle(display_roi, (int(x), int(y)), 3, (0, 0, 255), -1)
         
         # Create visualization
-        combined_frames = Visualizer.create_visualization(display_roi, edges, thresh, filtered)
+        combined_frames = BasicImageProcess.create_visualization(display_roi, edges, thresh, filtered)
         
         # Display results
         # cv2.imshow('Original Image', frame)
@@ -483,7 +478,7 @@ class ImagePipeline:
         filtered_ref, roi_ref = ImagePreprocessor.preprocess_image(reference_image, self.config)
         filtered_test, roi_test = ImagePreprocessor.preprocess_image(test_image, self.config)
         
-        tolerance = 6
+        tolerance = 4
         blur_effect = 0
         # Compare preprocessed regions
         diff_mask, similarity_score = ImageComparator.compare_images(filtered_ref, filtered_test, tolerance, blur_effect)
@@ -518,7 +513,7 @@ class ImagePipeline:
         return anomalies, similarity_score
     
     # Key 3
-    def compare_objects_only(self, reference_path: str, test_path: str):
+    def remove_background(self, reference_path: str, test_path: str):
         """Compare a test image with a reference image to find anomalies, focusing ONLY on the main object."""
         # Load images
         reference_image = ImageLoader.load_image(reference_path)
@@ -581,7 +576,7 @@ class ImagePipeline:
         return anomalies, similarity_score
 
     # Key 4
-    def analyse_multiple_images(self, image_path: str):
+    def group_images(self, image_path: str):
         image = ImageLoader.load_image(image_path)
         if image is None:
             print("Error loading image")
@@ -775,7 +770,7 @@ def main():
         )
         
         if file_path:
-            corners = pipeline.process_image(file_path)
+            corners = pipeline.basic_simple_image_process(file_path)
             if corners:
                 print(f"Found {len(corners)} corners in the image")
         else:
@@ -839,7 +834,7 @@ def main():
             print("No test image selected")
             return
             
-        pipeline.compare_objects_only(reference_path, test_path)
+        pipeline.remove_background(reference_path, test_path)
     
     elif choice == '4':
         # Quadrant analysis mode
@@ -852,7 +847,7 @@ def main():
         )
         
         if file_path:
-            results = pipeline.analyse_multiple_images(file_path)
+            results = pipeline.group_images(file_path)
             if not results:
                 print("Analysis failed or no results generated")
         else:
