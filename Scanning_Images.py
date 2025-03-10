@@ -5,6 +5,7 @@ from tkinter import filedialog
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
+##############################################General###################################################### 
 @dataclass
 class ImageProcessingConfig:
     """Configuration parameters for image processing."""
@@ -154,7 +155,7 @@ class ImagePreprocessor:
         cv2.imshow('Dilated Mask (For Visualization)', dilated_mask)
         
         return eroded_mask
-
+##############################################Processing######################################################
 class BasicImageProcess:
     """Handles edge and contour detection."""
     @staticmethod
@@ -408,7 +409,7 @@ class ImageComparator:
         comparison = np.vstack([top_row, bottom_row])
         
         return comparison
-
+##############################################Pipeline######################################################
 class ImagePipeline:
     """Main pipeline for image corner detection."""
     def __init__(self, config: Optional[ImageProcessingConfig] = None):
@@ -740,7 +741,7 @@ class ImagePipeline:
 
 
 
-####################################################################################################
+##############################################Main######################################################
 def main():
     """Main function to select and process images."""
     # Create a simple Tkinter root window

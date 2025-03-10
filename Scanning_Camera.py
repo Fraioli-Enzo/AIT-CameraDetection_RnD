@@ -1,7 +1,7 @@
-import ezdxf
-import cv2
-import numpy as np
 import os
+import cv2
+import ezdxf
+import numpy as np
 
 # Function to save coordinates to a DXF file 
 def save_to_dxf(corners, filename="output.dxf"):
