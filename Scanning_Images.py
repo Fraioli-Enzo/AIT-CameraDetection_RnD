@@ -8,16 +8,16 @@ from typing import List, Tuple, Optional
 @dataclass
 class ImageProcessingConfig:
     """Configuration parameters for image processing."""
-    bilateral_filter_diameter: int = 5
-    bilateral_sigma_color: float = 50
-    bilateral_sigma_space: float = 50
+    bilateral_filter_diameter: int = 6
+    bilateral_sigma_color: float = 100
+    bilateral_sigma_space: float = 100
     adaptive_thresh_method: int = cv2.ADAPTIVE_THRESH_MEAN_C
     adaptive_thresh_type: int = cv2.THRESH_BINARY_INV
     adaptive_block_size: int = 15
     adaptive_const: float = 2
-    canny_threshold1: float = 25
-    canny_threshold2: float = 250
-    min_contour_area: float = 20
+    canny_threshold1: float = 10
+    canny_threshold2: float = 150
+    min_contour_area: float = 25
     max_corners: int = 25
     corner_quality_level: float = 0.01
     corner_min_distance: float = 10
@@ -752,10 +752,10 @@ def main():
     
     # Ask user what they want to do
     print("Select operation:")
-    print("1. Detect corners in a single image")
+    print("1. Simple image analyzing")
     print("2. Compare two images to find anomalies")
-    print("3. Compare two images focusing only on the main object")
-    print("4. Analyze image by dividing it into four quadrants")
+    print("3. Compare two images by deleting the background")
+    print("4. Group images based on quadrant analysis")
 
     choice = input("Enter your choice (1, 2, 3 or 4): ")
     
