@@ -169,7 +169,7 @@ else:
             print(f"Exposure: {exposure}")
             
             # Now set to new values
-            cap.set(cv2.CAP_PROP_BRIGHTNESS, 50)
+            cap.set(cv2.CAP_PROP_BRIGHTNESS, 60)
             cap.set(cv2.CAP_PROP_CONTRAST, 2)
             cap.set(cv2.CAP_PROP_GAIN, -1)
             cap.set(cv2.CAP_PROP_EXPOSURE, -6)
