@@ -1,20 +1,6 @@
 import os
 import cv2
-import ezdxf
 import numpy as np
-
-# Function to save coordinates to a DXF file 
-def save_to_dxf(corners, filename="output.dxf"):
-    doc = ezdxf.new(dxfversion='R2010')
-    msp = doc.modelspace()
-    
-    for point in corners:
-        x, y = point.ravel()  # Convert from array to simple coordinates
-        mirrored_point = (float(x), float(-y))  # Convert to float and mirror y
-        msp.add_point(mirrored_point, dxfattribs={'color': 1})
-    
-    doc.saveas(filename)
-    print(f"Coordinates saved to {filename}")
 
 # Function to save an image from the camera
 def save_image(frame, filename="captured_image.png"):
@@ -30,9 +16,8 @@ if not cap.isOpened():
     print("Error: Could not open camera.")
 else:
     print("Press 'q' to exit the video window.")
-    print("Press 's' to save coordinates to a DXF file.")
-    print("Press 'i' to save the current frame as an image.")
-    print("Press 'o' to save the current frame as an anomali image.")
+    print("Press 'p' to save the current frame as an pattern image.")
+    print("Press 'i' to save the current frame as an anomali image.")
     print("Press 'r' to change camera parameters.")
     while True:
         # Capture frames frame by frame
@@ -146,8 +131,6 @@ else:
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             break
-        elif key == ord('s') and all_corners:
-            save_to_dxf(all_corners)
         elif key == ord('p'):
             pattern_image_count = len([name for name in os.listdir('Images') if name.startswith("pattern")])
             save_image(roi_without_border, f"Images/pattern_{pattern_image_count + 1}.png")
@@ -156,7 +139,6 @@ else:
             print(f"Anomali image count: {pattern_image_count_2}")
             save_image(roi_without_border, f"Images/anomali_{pattern_image_count_2 + 1}.png")
         elif key == ord('r'):
- 
             print("Current camera parameter values:")
             brightness = cap.get(cv2.CAP_PROP_BRIGHTNESS)
             contrast = cap.get(cv2.CAP_PROP_CONTRAST)
