@@ -30,7 +30,7 @@ else:
 
         # Define the region of interest (ROI) as a centered square
         frame_height, frame_width = frame.shape[:2]
-        roi_size = 260  # Size of the square
+        roi_size = 400  # Size of the square
         roi_start_x = frame_width // 2 - roi_size // 2
         roi_start_y = frame_height // 2 - roi_size // 2
         roi_end_x = roi_start_x + roi_size

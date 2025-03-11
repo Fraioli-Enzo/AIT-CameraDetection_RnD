@@ -1,8 +1,24 @@
 import cv2
 import numpy as np
 import tkinter as tk
+from typing import Optional
 from tkinter import filedialog
-from typing import Tuple, Optional
+from dataclasses import dataclass
+
+@dataclass
+class ImageProcessingConfig:
+    """Configuration parameters for pattern image analysis."""
+    #----------Preprocessing parameters----------#
+    # CLACHE parameters
+    tileGridSize = (4, 4)
+    clipLimit = 3
+    #Gaussian Blur parameters
+    ksize = (5, 5)
+    sigmaX = 0
+    #Fourier Transform parameters
+    inner_radius = 30
+    outer_radius = 90
+
 
 ##############################################General###################################################### 
 class ImageLoader:
@@ -17,17 +33,17 @@ class ImageLoader:
 class ImagePreprocessor:
     """Applies preprocessing techniques to the image."""
     @staticmethod
-    def preprocess_image(image: np.ndarray) -> np.ndarray:
+    def preprocess_image(image: np.ndarray, config: ImageProcessingConfig) -> np.ndarray:
         # Convert to grayscale if the image is not already in grayscale
         if len(image.shape) == 3:
             gray_frame = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         else:
             gray_frame = image.copy()
-            
+        
         # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) for contrast enhancement
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        clahe = cv2.createCLAHE(config.clipLimit, config.tileGridSize)
         enhanced_frame = clahe.apply(gray_frame)
-        blurred = cv2.GaussianBlur(enhanced_frame, (5, 5), 0)
+        blurred = cv2.GaussianBlur(enhanced_frame, config.ksize, config.sigmaX)
         
         # Extraction of fabric periodic pattern
         # Apply Fourier Transform to find periodic patterns
@@ -41,12 +57,10 @@ class ImagePreprocessor:
 
         # Keep only the frequency components in a specific band
         # This targets the periodic patterns typically found in fabrics
-        inner_radius = 30
-        outer_radius = 90
         for i in range(rows):
             for j in range(cols):
                 dist = np.sqrt((i - crow) ** 2 + (j - ccol) ** 2)
-                if inner_radius < dist < outer_radius:
+                if config.inner_radius < dist < config.outer_radius:
                     mask[i, j] = 1
 
         # Apply the mask and perform inverse DFT
@@ -76,7 +90,7 @@ class ImagePipeline:
             return None
         
         # Preprocess both images the same way
-        filtered_ref = ImagePreprocessor.preprocess_image(reference_image)
+        filtered_ref = ImagePreprocessor.preprocess_image(reference_image, ImageProcessingConfig)
 
         # Display the filtered reference image
         cv2.namedWindow('Filtered Reference', cv2.WINDOW_NORMAL)
