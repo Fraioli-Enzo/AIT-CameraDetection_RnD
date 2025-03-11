@@ -30,7 +30,7 @@ else:
 
         # Define the region of interest (ROI) as a centered square
         frame_height, frame_width = frame.shape[:2]
-        roi_size = 200  # Size of the square
+        roi_size = 260  # Size of the square
         roi_start_x = frame_width // 2 - roi_size // 2
         roi_start_y = frame_height // 2 - roi_size // 2
         roi_end_x = roi_start_x + roi_size
@@ -138,23 +138,13 @@ else:
             pattern_image_count_2 = len([name for name in os.listdir('Images') if name.startswith("anomali")])
             print(f"Anomali image count: {pattern_image_count_2}")
             save_image(roi_without_border, f"Images/anomali_{pattern_image_count_2 + 1}.png")
-        elif key == ord('r'):
-            print("Current camera parameter values:")
-            brightness = cap.get(cv2.CAP_PROP_BRIGHTNESS)
-            contrast = cap.get(cv2.CAP_PROP_CONTRAST)
-            gain = cap.get(cv2.CAP_PROP_GAIN)
-            exposure = cap.get(cv2.CAP_PROP_EXPOSURE)
-            
-            print(f"Brightness: {brightness}")
-            print(f"Contrast: {contrast}")
-            print(f"Gain: {gain}")
-            print(f"Exposure: {exposure}")
-            
+        elif key == ord('r'): 
             # Now set to new values
-            cap.set(cv2.CAP_PROP_BRIGHTNESS, 60)
+            cap.set(cv2.CAP_PROP_BRIGHTNESS, 79)
             cap.set(cv2.CAP_PROP_CONTRAST, 2)
             cap.set(cv2.CAP_PROP_GAIN, -1)
             cap.set(cv2.CAP_PROP_EXPOSURE, -6)
-    # Release the capture when everything is done
+
+
     cap.release()
     cv2.destroyAllWindows()
