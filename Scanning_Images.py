@@ -41,7 +41,8 @@ class ImagePreprocessor:
 
         # Convert to grayscale
         gray_frame = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        
+
+
         # Apply bilateral filter
         filtered = cv2.bilateralFilter(
             gray_frame, 
