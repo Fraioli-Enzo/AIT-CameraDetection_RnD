@@ -336,6 +336,16 @@ class ImageComparator:
         comparison_grid = np.vstack([middle_row, bottom_row])
         
         # Display the grid
+        # Resize the visualization if it's too large
+        max_width, max_height = 1200, 800
+        grid_height, grid_width = comparison_grid.shape[:2]
+        
+        if grid_width > max_width or grid_height > max_height:
+            # Calculate scaling factor to fit within max dimensions
+            scale = min(max_width / grid_width, max_height / grid_height)
+            comparison_grid = cv2.resize(comparison_grid, None, fx=scale, fy=scale, 
+                        interpolation=cv2.INTER_AREA)
+        
         cv2.imshow('Image Processing Steps', comparison_grid)
 
         print("\033[91m Press q to close windows\033[0m")
@@ -491,6 +501,16 @@ class ImagePipeline:
         # Create visualization
         comparison_viz = ImageComparator.highlight_anomalies(roi_ref, roi_test, diff_mask)
         
+        # Resize the visualization if it's too large
+        max_width, max_height = 1200, 800  # Maximum display dimensions
+        vis_height, vis_width = comparison_viz.shape[:2]
+        
+        if vis_width > max_width or vis_height > max_height:
+            # Calculate the scaling factor to fit within max dimensions
+            scale = min(max_width / vis_width, max_height / vis_height)
+            comparison_viz = cv2.resize(comparison_viz, None, fx=scale, fy=scale, 
+                        interpolation=cv2.INTER_AREA)
+            
         # Display results
         cv2.imshow('Image Comparison', comparison_viz)
         
