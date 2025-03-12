@@ -3,21 +3,12 @@ import numpy as np
 import tkinter as tk
 from typing import Optional
 from tkinter import filedialog
+import matplotlib.pyplot as plt
 from dataclasses import dataclass
 
 @dataclass
 class ImageProcessingConfig:
     """Configuration parameters for pattern image analysis."""
-    #----------Preprocessing parameters----------#
-    # CLACHE parameters
-    tileGridSize = (4, 4)
-    clipLimit = 3
-    #Gaussian Blur parameters
-    ksize = (1, 1)
-    sigmaX = 0
-    #Fourier Transform parameters
-    inner_radius = 30
-    outer_radius = 90
 
 
 ##############################################General###################################################### 
@@ -44,50 +35,92 @@ class ImageLoader:
             return None
         return image_path
 
-class ImagePreprocessor:
-    """Applies preprocessing techniques to the image."""
+class ImagePreprocessor: 
     @staticmethod
     def preprocess_image(image: np.ndarray, config: ImageProcessingConfig) -> np.ndarray:
-        # Convert to grayscale if the image is not already in grayscale
+        """
+        Preprocesses an image and generates intensity profile visualizations.
+        
+        Args:
+            image: Input image as numpy array
+            config: Configuration parameters for image processing
+            
+        Returns:
+            Preprocessed grayscale image
+        """
+        # Convert to grayscale if the image is in color
+        grayscale_image = ImagePreprocessor._convert_to_grayscale(image)
+        
+        # Apply noise reduction
+        filtered_image = cv2.GaussianBlur(grayscale_image, (5, 5), 0)
+        
+        # Generate and save intensity profile visualizations
+        ImagePreprocessor._generate_intensity_profiles(filtered_image)
+        
+        return filtered_image
+    
+    @staticmethod
+    def _convert_to_grayscale(image: np.ndarray):
+        """Convert an image to grayscale if not already."""
         if len(image.shape) == 3:
-            gray_frame = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        else:
-            gray_frame = image.copy()
+            return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        return image.copy()
+    
+    @staticmethod
+    def _generate_intensity_profiles(grayscale_image: np.ndarray):
+        """Generate and visualize horizontal and vertical intensity profiles."""
+        height, width = grayscale_image.shape
+        print(f"Image dimensions: {height}x{width}")
         
-        # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) for contrast enhancement
-        clahe = cv2.createCLAHE(config.clipLimit, config.tileGridSize)
-        enhanced_frame = clahe.apply(gray_frame)
-        blurred = cv2.GaussianBlur(enhanced_frame, config.ksize, config.sigmaX)
+        # Calculate average intensities
+        horizontal_profile = np.mean(grayscale_image, axis=0)  # Average by column (left to right)
+        vertical_profile = np.mean(grayscale_image, axis=1)    # Average by row (top to bottom)
         
-        # Extraction of fabric periodic pattern
-        # Apply Fourier Transform to find periodic patterns
-        dft = cv2.dft(np.float32(blurred), flags=cv2.DFT_COMPLEX_OUTPUT)
-        dft_shift = np.fft.fftshift(dft)
-
-        # Create a mask to keep only the high-frequency components (fabric pattern)
-        rows, cols = blurred.shape
-        crow, ccol = rows // 2, cols // 2
-        mask = np.zeros((rows, cols, 2), np.uint8)
-
-        # Keep only the frequency components in a specific band
-        # This targets the periodic patterns typically found in fabrics
-        for i in range(rows):
-            for j in range(cols):
-                dist = np.sqrt((i - crow) ** 2 + (j - ccol) ** 2)
-                if config.inner_radius < dist < config.outer_radius:
-                    mask[i, j] = 1
-
-        # Apply the mask and perform inverse DFT
-        fshift = dft_shift * mask
-        f_ishift = np.fft.ifftshift(fshift)
-        img_back = cv2.idft(f_ishift)
-        filtered = cv2.magnitude(img_back[:, :, 0], img_back[:, :, 1])
-
-        # Normalize the result for better visualization
-        cv2.normalize(filtered, filtered, 0, 255, cv2.NORM_MINMAX)
-        filtered = filtered.astype(np.uint8)
-
-        return filtered
+        # Save and display horizontal profile
+        horizontal_profile_path = 'horizontal_intensity_profile.png'
+        ImagePreprocessor._plot_intensity_profile(
+            horizontal_profile, 
+            range(width),
+            'Horizontal Intensity Profile (Left to Right)',
+            'X Position (pixels)',
+            horizontal_profile_path
+        )
+        
+        # Save and display vertical profile
+        vertical_profile_path = 'vertical_intensity_profile.png'
+        ImagePreprocessor._plot_intensity_profile(
+            vertical_profile, 
+            range(height),
+            'Vertical Intensity Profile (Top to Bottom)',
+            'Y Position (pixels)',
+            vertical_profile_path
+        )
+        
+        # Display the profile images
+        ImagePreprocessor._display_profile_images(horizontal_profile_path, vertical_profile_path)
+    
+    @staticmethod
+    def _plot_intensity_profile(intensity_values, positions, title, xlabel, save_path):
+        """Create and save an intensity profile plot."""
+        plt.figure(figsize=(10, 6))
+        plt.plot(positions, intensity_values)
+        plt.title(title)
+        plt.xlabel(xlabel)
+        plt.ylabel('Average Intensity')
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(save_path)
+        plt.close()
+    
+    @staticmethod
+    def _display_profile_images(horizontal_path, vertical_path):
+        """Display the saved profile images."""
+        horizontal_img = cv2.imread(horizontal_path)
+        vertical_img = cv2.imread(vertical_path)
+        
+        if horizontal_img is not None and vertical_img is not None:
+            cv2.imshow('Horizontal Intensity Profile', horizontal_img)
+            cv2.imshow('Vertical Intensity Profile', vertical_img)
 
 ##############################################Pipeline######################################################
 class ImagePipeline:
