@@ -5,6 +5,8 @@ from typing import Optional
 from tkinter import filedialog
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
+import json
+import os
 
 @dataclass
 class ImageProcessingConfig:
@@ -51,11 +53,8 @@ class ImagePreprocessor:
         # Convert to grayscale if the image is in color
         grayscale_image = ImagePreprocessor._convert_to_grayscale(image)
         
-        # Apply noise reduction
-        filtered_image = cv2.GaussianBlur(grayscale_image, (5, 5), 0)
-        
         # Generate and save intensity profile visualizations
-        ImagePreprocessor._generate_intensity_profiles(filtered_image)
+        ImagePreprocessor._generate_intensity_profiles(grayscale_image)
 
         # Maintain a copy of the original colored image for RGB analysis
         original_image = image.copy()
@@ -68,7 +67,7 @@ class ImagePreprocessor:
             # Generate and save RGB intensity profiles
             ImagePreprocessor._generate_rgb_intensity_profiles(r, g, b)
         
-        return filtered_image
+        return grayscale_image
     
     @staticmethod
     def _convert_to_grayscale(image: np.ndarray):
@@ -110,7 +109,6 @@ class ImagePreprocessor:
         # Display the profile images
         ImagePreprocessor._display_profile_images(horizontal_profile_path, vertical_profile_path)
     
-
     @staticmethod
     def _generate_rgb_intensity_profiles(r: np.ndarray, g: np.ndarray, b: np.ndarray):
         """Generate and save RGB channel intensity profiles."""
@@ -155,10 +153,66 @@ class ImagePreprocessor:
         plt.savefig(f'{folder_path}/vertical_rgb_profile.png')
         plt.close()
 
+        # Create and save combined RGB intensity plots
+        plt.figure(figsize=(10, 6))
+
+        # Combined RGB horizontal profile (sum of channels)
+        combined_horizontal = r_horizontal + g_horizontal + b_horizontal
+        plt.plot(range(width), combined_horizontal, 'k-', label='Combined RGB')
+        plt.title('Combined Horizontal RGB Intensity Profile')
+        plt.xlabel('X Position (pixels)')
+        plt.ylabel('Combined Intensity')
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(f'{folder_path}/combined_horizontal_rgb_profile.png')
+        plt.close()
+
+        # Combined RGB vertical profile (sum of channels)
+        plt.figure(figsize=(10, 6))
+        combined_vertical = r_vertical + g_vertical + b_vertical
+        plt.plot(range(height), combined_vertical, 'k-', label='Combined RGB')
+        plt.title('Combined Vertical RGB Intensity Profile')
+        plt.xlabel('Y Position (pixels)')
+        plt.ylabel('Combined Intensity')
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(f'{folder_path}/combined_vertical_rgb_profile.png')
+        plt.close()
+
         cv2.imshow('Horizontal RGB Intensity Profiles', cv2.imread(f'{folder_path}/horizontal_rgb_profile.png'))
         cv2.imshow('Vertical RGB Intensity Profiles', cv2.imread(f'{folder_path}/vertical_rgb_profile.png'))
-        cv2.waitKey(0)
+        cv2.imshow('Vertical new', cv2.imread(f'{folder_path}/combined_vertical_rgb_profile.png'))
+        # Save all profile data to JSON for use by other functions
 
+        # Create a dictionary to store all the profile data
+        profile_data = {
+            "horizontal_rgb": {
+                "red": r_horizontal.tolist(),
+                "green": g_horizontal.tolist(),
+                "blue": b_horizontal.tolist()
+            },
+            "vertical_rgb": {
+                "red": r_vertical.tolist(),
+                "green": g_vertical.tolist(),
+                "blue": b_vertical.tolist()
+            },
+            "image_dimensions": {
+                "height": height,
+                "width": width
+            }
+        }
+
+        # Create directory if it doesn't exist
+        os.makedirs(folder_path, exist_ok=True)
+
+        # Write the data to a JSON file
+        with open(f'{folder_path}/profile_data.json', 'w') as json_file:
+            json.dump(profile_data, json_file, indent=4)
+
+        print(f"Profile data saved to {folder_path}/profile_data.json")
+        cv2.waitKey(0)
 
     @staticmethod
     def _plot_intensity_profile(intensity_values, positions, title, xlabel, save_path):
@@ -188,52 +242,71 @@ class ImagePattern:
     @staticmethod
     def separate_pattern(image: np.ndarray) -> np.ndarray:
         """
-        Detects peaks in horizontal and vertical intensity profiles and draws lines on the image.
+        Separate pattern features based on intensity profiles.
+        Identifies peaks in RGB profiles and marks them on the grayscale image.
+        Uses a 10-pixel window to reduce density of lines.
         
         Args:
             image: Preprocessed grayscale image
             
         Returns:
-            Image with pattern separation lines
+            Image with pattern features marked
         """
-        height, width = image.shape
-        result_image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-        
-        # Calculate intensity profiles
-        horizontal_profile = np.mean(image, axis=0)  # Average by column
-        vertical_profile = np.mean(image, axis=1)    # Average by row
-        
-        # Load saved profiles for analysis (if needed)
         folder_path = 'py-src/PatternFeatures'
+        profile_path = f'{folder_path}/profile_data.json'
         
-        # Find peaks in horizontal profile (columns)
-        horizontal_peaks = []
-        window_size = 30
-        threshold = np.mean(horizontal_profile) 
+        # Check if profile data exists
+        if not os.path.exists(profile_path):
+            print(f"Profile data not found at {profile_path}")
+            return image
         
-        for i in range(window_size, len(horizontal_profile) - window_size):
-            window = horizontal_profile[i-window_size:i+window_size]
-            if horizontal_profile[i] == max(window) and horizontal_profile[i] > threshold:
-                horizontal_peaks.append(i)
+        # Load profile data from JSON
+        try:
+            with open(profile_path, 'r') as file:
+                profile_data = json.load(file)
+        except Exception as e:
+            print(f"Error loading profile data: {e}")
+            return image
         
-        # Find peaks in vertical profile (rows)
-        vertical_peaks = []
-        threshold = np.mean(vertical_profile)
+        # Create a color version of the grayscale image to draw colored lines
+        result_image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+        height, width = image.shape
         
-        for i in range(window_size, len(vertical_profile) - window_size):
-            window = vertical_profile[i-window_size:i+window_size]
-            if vertical_profile[i] == max(window) and vertical_profile[i] > threshold:
-                vertical_peaks.append(i)
-        
-        # Draw vertical lines (at horizontal peaks)
-        for x in horizontal_peaks:
-            cv2.line(result_image, (x, 0), (x, height-1), (0, 0, 255), 1)
+        # Find peaks in horizontal and vertical profiles
+        for channel, color in [('red', (0, 0, 255)), ('green', (0, 255, 0)), ('blue', (255, 0, 0))]:
+            horizontal_data = np.array(profile_data["horizontal_rgb"][channel])
+            vertical_data = np.array(profile_data["vertical_rgb"][channel])
             
-        # Draw horizontal lines (at vertical peaks)
-        for y in vertical_peaks:
-            cv2.line(result_image, (0, y), (width-1, y), (0, 255, 0), 1)
+            # Find significant peaks in horizontal profile (left to right)
+            threshold = np.mean(horizontal_data) + np.std(horizontal_data)
+            peak_indices_h = np.where(horizontal_data > threshold)[0]
             
-        print(f"Found {len(horizontal_peaks)} vertical lines and {len(vertical_peaks)} horizontal lines")
+            # Find significant peaks in vertical profile (top to bottom)
+            threshold = np.mean(vertical_data) + np.std(vertical_data)
+            peak_indices_v = np.where(vertical_data > threshold)[0]
+            
+            # Group peaks by 10-pixel windows for horizontal lines
+            window_size = 10
+            for i in range(0, len(peak_indices_h), window_size):
+                window_peaks = peak_indices_h[i:i+window_size]
+                if len(window_peaks) > 0:
+                    # Use the position with the highest intensity within the window
+                    window_intensities = [horizontal_data[x] for x in window_peaks]
+                    best_peak_idx = window_peaks[np.argmax(window_intensities)]
+                    cv2.line(result_image, (best_peak_idx, 0), (best_peak_idx, height-1), color, 1)
+            
+            # Group peaks by 10-pixel windows for vertical lines
+            for i in range(0, len(peak_indices_v), window_size):
+                window_peaks = peak_indices_v[i:i+window_size]
+                if len(window_peaks) > 0:
+                    # Use the position with the highest intensity within the window
+                    window_intensities = [vertical_data[y] for y in window_peaks]
+                    best_peak_idx = window_peaks[np.argmax(window_intensities)]
+                    cv2.line(result_image, (0, best_peak_idx), (width-1, best_peak_idx), color, 1)
+        
+        # Save the result for reference
+        cv2.imwrite(f'{folder_path}/pattern_peaks.png', result_image)
+        
         return result_image
 
 ##############################################Pipeline######################################################
