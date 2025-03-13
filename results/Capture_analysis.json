@@ -1,0 +1,1104 @@
+{
+    "num_activation_maps": 256,
+    "num_peak_maps": 218,
+    "pattern_info": {
+        "1": {
+            "avg_distance": 5.385164807134504,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "2": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "3": {
+            "avg_distance": 2.0,
+            "std_distance": 1.0,
+            "regularity": 0.6666666666666666,
+            "num_peaks": 3
+        },
+        "4": {
+            "avg_distance": 2.04103520853922,
+            "std_distance": 1.4722461108240685,
+            "regularity": 0.5809484134646856,
+            "num_peaks": 4
+        },
+        "6": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "8": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "9": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "10": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "12": {
+            "avg_distance": 3.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "13": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "15": {
+            "avg_distance": 2.0,
+            "std_distance": 1.0,
+            "regularity": 0.6666666666666666,
+            "num_peaks": 3
+        },
+        "16": {
+            "avg_distance": 2.5,
+            "std_distance": 0.5,
+            "regularity": 0.8333333333333334,
+            "num_peaks": 3
+        },
+        "17": {
+            "avg_distance": 1.6666666666666667,
+            "std_distance": 0.9428090415820634,
+            "regularity": 0.6386979044864147,
+            "num_peaks": 4
+        },
+        "18": {
+            "avg_distance": 1.618033988749895,
+            "std_distance": 0.6180339887498949,
+            "regularity": 0.723606797749979,
+            "num_peaks": 3
+        },
+        "19": {
+            "avg_distance": 3.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "20": {
+            "avg_distance": 1.6666666666666667,
+            "std_distance": 0.4714045207910317,
+            "regularity": 0.7795187907884576,
+            "num_peaks": 4
+        },
+        "21": {
+            "avg_distance": 2.3333333333333335,
+            "std_distance": 0.9428090415820634,
+            "regularity": 0.7122197591896748,
+            "num_peaks": 4
+        },
+        "22": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "23": {
+            "avg_distance": 1.3333333333333333,
+            "std_distance": 0.4714045207910317,
+            "regularity": 0.7387961250362586,
+            "num_peaks": 4
+        },
+        "24": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "25": {
+            "avg_distance": 5.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "27": {
+            "avg_distance": 1.1380711874576983,
+            "std_distance": 0.19526214587563503,
+            "regularity": 0.8535533905932737,
+            "num_peaks": 4
+        },
+        "28": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "29": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "30": {
+            "avg_distance": 3.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "31": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "32": {
+            "avg_distance": 2.0,
+            "std_distance": 1.4142135623730951,
+            "regularity": 0.585786437626905,
+            "num_peaks": 4
+        },
+        "33": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "34": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "35": {
+            "avg_distance": 2.5,
+            "std_distance": 1.5,
+            "regularity": 0.625,
+            "num_peaks": 3
+        },
+        "37": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "38": {
+            "avg_distance": 3.0,
+            "std_distance": 2.0,
+            "regularity": 0.6000000000000001,
+            "num_peaks": 3
+        },
+        "39": {
+            "avg_distance": 2.0,
+            "std_distance": 1.0,
+            "regularity": 0.6666666666666666,
+            "num_peaks": 3
+        },
+        "42": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "44": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "46": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "48": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 3
+        },
+        "49": {
+            "avg_distance": 3.08113883008419,
+            "std_distance": 0.08113883008418976,
+            "regularity": 0.9743416490252569,
+            "num_peaks": 3
+        },
+        "50": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "51": {
+            "avg_distance": 4.6996731711975945,
+            "std_distance": 0.4963924024991465,
+            "regularity": 0.9044676408604313,
+            "num_peaks": 4
+        },
+        "53": {
+            "avg_distance": 1.1380711874576983,
+            "std_distance": 0.19526214587563503,
+            "regularity": 0.8535533905932737,
+            "num_peaks": 4
+        },
+        "54": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 3
+        },
+        "55": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "56": {
+            "avg_distance": 1.6666666666666667,
+            "std_distance": 0.9428090415820634,
+            "regularity": 0.6386979044864147,
+            "num_peaks": 4
+        },
+        "57": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "58": {
+            "avg_distance": 2.5522847498307937,
+            "std_distance": 2.195262145875635,
+            "regularity": 0.5376007453742102,
+            "num_peaks": 4
+        },
+        "59": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "60": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "61": {
+            "avg_distance": 4.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "62": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "63": {
+            "avg_distance": 5.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "64": {
+            "avg_distance": 5.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "65": {
+            "avg_distance": 2.0,
+            "std_distance": 1.0,
+            "regularity": 0.6666666666666666,
+            "num_peaks": 3
+        },
+        "66": {
+            "avg_distance": 5.049509756796392,
+            "std_distance": 0.049509756796392246,
+            "regularity": 0.9902903378454601,
+            "num_peaks": 3
+        },
+        "67": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "68": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "69": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "70": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "71": {
+            "avg_distance": 2.0,
+            "std_distance": 1.0,
+            "regularity": 0.6666666666666666,
+            "num_peaks": 3
+        },
+        "72": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "73": {
+            "avg_distance": 3.9154759474226504,
+            "std_distance": 1.9154759474226504,
+            "regularity": 0.6714985851425088,
+            "num_peaks": 3
+        },
+        "74": {
+            "avg_distance": 2.04103520853922,
+            "std_distance": 1.4722461108240685,
+            "regularity": 0.5809484134646856,
+            "num_peaks": 4
+        },
+        "75": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "78": {
+            "avg_distance": 1.6666666666666667,
+            "std_distance": 0.4714045207910317,
+            "regularity": 0.7795187907884576,
+            "num_peaks": 4
+        },
+        "81": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "83": {
+            "avg_distance": 4.0236892706218255,
+            "std_distance": 2.4785596597250064,
+            "regularity": 0.6188150151930896,
+            "num_peaks": 4
+        },
+        "84": {
+            "avg_distance": 1.3333333333333333,
+            "std_distance": 0.4714045207910317,
+            "regularity": 0.7387961250362586,
+            "num_peaks": 4
+        },
+        "85": {
+            "avg_distance": 2.5,
+            "std_distance": 0.5,
+            "regularity": 0.8333333333333334,
+            "num_peaks": 3
+        },
+        "86": {
+            "avg_distance": 2.5,
+            "std_distance": 0.5,
+            "regularity": 0.8333333333333334,
+            "num_peaks": 3
+        },
+        "87": {
+            "avg_distance": 1.3333333333333333,
+            "std_distance": 0.4714045207910317,
+            "regularity": 0.7387961250362586,
+            "num_peaks": 4
+        },
+        "88": {
+            "avg_distance": 5.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "89": {
+            "avg_distance": 5.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "92": {
+            "avg_distance": 1.6666666666666667,
+            "std_distance": 0.9428090415820634,
+            "regularity": 0.6386979044864147,
+            "num_peaks": 4
+        },
+        "94": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "95": {
+            "avg_distance": 1.6666666666666667,
+            "std_distance": 0.9428090415820634,
+            "regularity": 0.6386979044864147,
+            "num_peaks": 4
+        },
+        "96": {
+            "avg_distance": 1.1380711874576983,
+            "std_distance": 0.19526214587563503,
+            "regularity": 0.8535533905932737,
+            "num_peaks": 4
+        },
+        "98": {
+            "avg_distance": 2.0,
+            "std_distance": 1.0,
+            "regularity": 0.6666666666666666,
+            "num_peaks": 3
+        },
+        "99": {
+            "avg_distance": 2.302775637731995,
+            "std_distance": 1.3027756377319946,
+            "regularity": 0.6386750490563073,
+            "num_peaks": 3
+        },
+        "100": {
+            "avg_distance": 5.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "101": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "102": {
+            "avg_distance": 3.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "105": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "107": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "108": {
+            "avg_distance": 7.0710678118654755,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "109": {
+            "avg_distance": 2.0,
+            "std_distance": 1.0,
+            "regularity": 0.6666666666666666,
+            "num_peaks": 3
+        },
+        "110": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "111": {
+            "avg_distance": 2.5,
+            "std_distance": 0.5,
+            "regularity": 0.8333333333333334,
+            "num_peaks": 3
+        },
+        "112": {
+            "avg_distance": 2.5,
+            "std_distance": 0.5,
+            "regularity": 0.8333333333333334,
+            "num_peaks": 3
+        },
+        "114": {
+            "avg_distance": 1.3333333333333333,
+            "std_distance": 0.4714045207910317,
+            "regularity": 0.7387961250362586,
+            "num_peaks": 4
+        },
+        "116": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "117": {
+            "avg_distance": 2.0,
+            "std_distance": 1.0,
+            "regularity": 0.6666666666666666,
+            "num_peaks": 3
+        },
+        "119": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "120": {
+            "avg_distance": 3.192582403567252,
+            "std_distance": 2.192582403567252,
+            "regularity": 0.5928476690885259,
+            "num_peaks": 3
+        },
+        "121": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "122": {
+            "avg_distance": 2.5,
+            "std_distance": 1.5,
+            "regularity": 0.625,
+            "num_peaks": 3
+        },
+        "123": {
+            "avg_distance": 3.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "126": {
+            "avg_distance": 5.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "127": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "128": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 3
+        },
+        "129": {
+            "avg_distance": 2.0,
+            "std_distance": 1.0,
+            "regularity": 0.6666666666666666,
+            "num_peaks": 3
+        },
+        "130": {
+            "avg_distance": 1.8246211251235323,
+            "std_distance": 1.2127480157695314,
+            "regularity": 0.6007241927094339,
+            "num_peaks": 6
+        },
+        "131": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "132": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "133": {
+            "avg_distance": 2.0,
+            "std_distance": 1.0,
+            "regularity": 0.6666666666666666,
+            "num_peaks": 3
+        },
+        "135": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "139": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "140": {
+            "avg_distance": 2.0,
+            "std_distance": 1.0954451150103321,
+            "regularity": 0.646110632135477,
+            "num_peaks": 6
+        },
+        "141": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "143": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "145": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 3
+        },
+        "146": {
+            "avg_distance": 5.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "147": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "148": {
+            "avg_distance": 1.6666666666666667,
+            "std_distance": 0.9428090415820634,
+            "regularity": 0.6386979044864147,
+            "num_peaks": 4
+        },
+        "149": {
+            "avg_distance": 2.5,
+            "std_distance": 1.5,
+            "regularity": 0.625,
+            "num_peaks": 3
+        },
+        "152": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "153": {
+            "avg_distance": 1.6666666666666667,
+            "std_distance": 0.4714045207910317,
+            "regularity": 0.7795187907884576,
+            "num_peaks": 4
+        },
+        "154": {
+            "avg_distance": 1.4120226591665965,
+            "std_distance": 0.5826880325984282,
+            "regularity": 0.7078834364281492,
+            "num_peaks": 4
+        },
+        "155": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 3
+        },
+        "157": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "158": {
+            "avg_distance": 2.0,
+            "std_distance": 1.0,
+            "regularity": 0.6666666666666666,
+            "num_peaks": 3
+        },
+        "159": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 3
+        },
+        "163": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "164": {
+            "avg_distance": 1.515298244508295,
+            "std_distance": 0.8389703392790951,
+            "regularity": 0.6436386463903724,
+            "num_peaks": 6
+        },
+        "165": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "166": {
+            "avg_distance": 2.5,
+            "std_distance": 1.5,
+            "regularity": 0.625,
+            "num_peaks": 3
+        },
+        "167": {
+            "avg_distance": 1.6666666666666667,
+            "std_distance": 0.9428090415820634,
+            "regularity": 0.6386979044864147,
+            "num_peaks": 4
+        },
+        "170": {
+            "avg_distance": 3.7015621187164243,
+            "std_distance": 2.7015621187164243,
+            "regularity": 0.578086880944303,
+            "num_peaks": 3
+        },
+        "171": {
+            "avg_distance": 2.5,
+            "std_distance": 1.5,
+            "regularity": 0.625,
+            "num_peaks": 3
+        },
+        "173": {
+            "avg_distance": 1.3333333333333333,
+            "std_distance": 0.4714045207910317,
+            "regularity": 0.7387961250362586,
+            "num_peaks": 4
+        },
+        "174": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "175": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "176": {
+            "avg_distance": 5.701562118716424,
+            "std_distance": 0.7015621187164243,
+            "regularity": 0.8904344047215151,
+            "num_peaks": 3
+        },
+        "179": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "180": {
+            "avg_distance": 2.0786893258332633,
+            "std_distance": 0.8240453183331932,
+            "regularity": 0.7161141408536073,
+            "num_peaks": 4
+        },
+        "181": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "182": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 3
+        },
+        "184": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "185": {
+            "avg_distance": 1.1380711874576983,
+            "std_distance": 0.19526214587563503,
+            "regularity": 0.8535533905932737,
+            "num_peaks": 4
+        },
+        "186": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "187": {
+            "avg_distance": 2.5,
+            "std_distance": 1.5,
+            "regularity": 0.625,
+            "num_peaks": 3
+        },
+        "189": {
+            "avg_distance": 3.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "191": {
+            "avg_distance": 2.5,
+            "std_distance": 1.5,
+            "regularity": 0.625,
+            "num_peaks": 3
+        },
+        "192": {
+            "avg_distance": 3.121915437578982,
+            "std_distance": 1.5012141754613277,
+            "regularity": 0.6752818326298051,
+            "num_peaks": 4
+        },
+        "193": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "194": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "196": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "197": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "198": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 3
+        },
+        "199": {
+            "avg_distance": 4.5,
+            "std_distance": 0.5,
+            "regularity": 0.8999999999999999,
+            "num_peaks": 3
+        },
+        "202": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 3
+        },
+        "204": {
+            "avg_distance": 3.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "205": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "207": {
+            "avg_distance": 2.5,
+            "std_distance": 1.5,
+            "regularity": 0.625,
+            "num_peaks": 3
+        },
+        "208": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "209": {
+            "avg_distance": 1.6666666666666667,
+            "std_distance": 0.9428090415820634,
+            "regularity": 0.6386979044864147,
+            "num_peaks": 4
+        },
+        "210": {
+            "avg_distance": 1.1380711874576983,
+            "std_distance": 0.19526214587563503,
+            "regularity": 0.8535533905932737,
+            "num_peaks": 4
+        },
+        "213": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "214": {
+            "avg_distance": 1.3333333333333333,
+            "std_distance": 0.4714045207910317,
+            "regularity": 0.7387961250362586,
+            "num_peaks": 4
+        },
+        "215": {
+            "avg_distance": 4.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 3
+        },
+        "216": {
+            "avg_distance": 2.664213562373095,
+            "std_distance": 1.9110117985159754,
+            "regularity": 0.5823130779847263,
+            "num_peaks": 5
+        },
+        "217": {
+            "avg_distance": 3.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "219": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "221": {
+            "avg_distance": 3.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "223": {
+            "avg_distance": 3.5495097567963922,
+            "std_distance": 1.5495097567963922,
+            "regularity": 0.6961161351381839,
+            "num_peaks": 3
+        },
+        "226": {
+            "avg_distance": 2.0,
+            "std_distance": 1.0,
+            "regularity": 0.6666666666666666,
+            "num_peaks": 3
+        },
+        "227": {
+            "avg_distance": 3.017766952966369,
+            "std_distance": 2.3755173368308804,
+            "regularity": 0.5595416059700825,
+            "num_peaks": 5
+        },
+        "228": {
+            "avg_distance": 2.5,
+            "std_distance": 0.5,
+            "regularity": 0.8333333333333334,
+            "num_peaks": 3
+        },
+        "232": {
+            "avg_distance": 3.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "233": {
+            "avg_distance": 2.0,
+            "std_distance": 1.0,
+            "regularity": 0.6666666666666666,
+            "num_peaks": 3
+        },
+        "235": {
+            "avg_distance": 1.6666666666666667,
+            "std_distance": 0.9428090415820634,
+            "regularity": 0.6386979044864147,
+            "num_peaks": 4
+        },
+        "236": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "237": {
+            "avg_distance": 3.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "238": {
+            "avg_distance": 3.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "239": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "240": {
+            "avg_distance": 1.5,
+            "std_distance": 0.5,
+            "regularity": 0.75,
+            "num_peaks": 3
+        },
+        "241": {
+            "avg_distance": 4.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "244": {
+            "avg_distance": 2.5,
+            "std_distance": 1.5,
+            "regularity": 0.625,
+            "num_peaks": 3
+        },
+        "247": {
+            "avg_distance": 4.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "249": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 3
+        },
+        "250": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "252": {
+            "avg_distance": 1.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "253": {
+            "avg_distance": 2.0,
+            "std_distance": 0.0,
+            "regularity": 1.0,
+            "num_peaks": 2
+        },
+        "255": {
+            "avg_distance": 1.3333333333333333,
+            "std_distance": 0.4714045207910317,
+            "regularity": 0.7387961250362586,
+            "num_peaks": 4
+        }
+    }
+}
