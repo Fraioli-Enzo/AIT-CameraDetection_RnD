@@ -22,8 +22,8 @@ def get_activation(name):
     return hook
 
 # Attach the hook to the last convolutional layer
-layer_name = 'conv1'  # Switch to an earlier layer
-features[0].register_forward_hook(get_activation(layer_name))  
+layer_name = 'conv2'  # Switch to an earlier layer
+features[3].register_forward_hook(get_activation(layer_name))  
 
 # Image preprocessing (Modify as needed for your dataset)
 transform = transforms.Compose([
@@ -48,7 +48,7 @@ activation_map = activation[layer_name].squeeze(0)  # Remove batch dimension
 # Get the top 30 activation points across all channels
 max_channel = activation_map.max(dim=0)[0]  # Collapse channels
 flattened = max_channel.flatten()
-top_values, top_indices = torch.topk(flattened, k=200)  # Get top 30 values and indices
+top_values, top_indices = torch.topk(flattened, k=100)  # Get top 30 values and indices
 
 # Convert flat indices to 2D coordinates
 h, w = max_channel.shape
