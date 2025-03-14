@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 import tkinter as tk
 from tkinter import filedialog
 
-class FeatureMapVisualizer:
+class SingleLayerVisualizer:
     def __init__(self, target_layer='conv2', layer_index=3):
         """
-        Initialize the feature map visualizer with the AlexNet model
+        Initialize the feature map visualizer with the AlexNet model for single layer analysis
         
         Args:
             target_layer (str): Name of the target layer for visualization
@@ -25,7 +25,7 @@ class FeatureMapVisualizer:
         self.layer_index = layer_index
         self.activation = {}
         
-        # Register hookq
+        # Register hook
         self.features[layer_index].register_forward_hook(self._get_activation_hook())
         
         # Image preprocessing
@@ -165,6 +165,60 @@ class FeatureMapVisualizer:
         # Visualize results
         self.visualize_activation_map(top_coords)
         self.visualize_image_with_activations(top_coords_scaled)
+
+
+class MultiLayerVisualizer:
+    def __init__(self):
+        """Initialize the feature map visualizer with the AlexNet model for multi-layer analysis"""
+        self.model = models.alexnet(weights=AlexNet_Weights.DEFAULT)
+        self.model.eval()
+        
+        # Extract convolutional layers
+        self.features = self.model.features
+        
+        # Define all conv layers in AlexNet
+        self.conv_layers = {
+            'conv1': 0,
+            'conv2': 3,
+            'conv3': 6,
+            'conv4': 8,
+            'conv5': 10
+        }
+        
+        # Image preprocessing
+        self.transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+        ])
+        
+        self.activation = {}
+    
+    def load_image(self, image_path):
+        """
+        Load and preprocess an image
+        
+        Args:
+            image_path (str): Path to the image file
+            
+        Returns:
+            torch.Tensor: Preprocessed image tensor
+        """
+        image = Image.open(image_path).convert("RGB")
+        self.input_tensor = self.transform(image).unsqueeze(0)  # Add batch dimension
+        return self.input_tensor
+    
+    def show_original_image(self):
+        """Display the original image"""
+        plt.figure(figsize=(10, 8))
+        plt.imshow(self.input_tensor.squeeze().permute(1, 2, 0).numpy())
+        plt.title("Original Image")
+        plt.show()
+    
+    def _create_hook_fn(self, layer_name):
+        """Create a hook function for a specific layer"""
+        def hook_fn(module, input, output):
+            self.activation[layer_name] = output.detach()
+        return hook_fn
     
     def analyze_all_conv_layers(self, image_path, k=50):
         """
@@ -180,18 +234,9 @@ class FeatureMapVisualizer:
         # Reset activation dictionary
         self.activation = {}
         
-        # Define all conv layers in AlexNet
-        conv_layers = {
-            'conv1': 0,
-            'conv2': 3,
-            'conv3': 6,
-            'conv4': 8,
-            'conv5': 10
-        }
-        
         # Set up hooks for all conv layers
         hooks = []
-        for layer_name, idx in conv_layers.items():
+        for layer_name, idx in self.conv_layers.items():
             hooks.append(
                 self.features[idx].register_forward_hook(
                     self._create_hook_fn(layer_name)
@@ -207,7 +252,7 @@ class FeatureMapVisualizer:
         
         # Process each layer's activations
         results = {}
-        for layer_name in conv_layers.keys():
+        for layer_name in self.conv_layers.keys():
             # Get the activation map for this layer
             activation_map = self.activation[layer_name].squeeze(0)
             
@@ -247,12 +292,6 @@ class FeatureMapVisualizer:
             
         return results
     
-    def _create_hook_fn(self, layer_name):
-        """Create a hook function for a specific layer"""
-        def hook_fn(module, input, output):
-            self.activation[layer_name] = output.detach()
-        return hook_fn
-    
     def visualize_all_layers(self, results, original_image=True):
         """
         Visualize activation maps from all layers
@@ -266,36 +305,71 @@ class FeatureMapVisualizer:
             self.show_original_image()
         
         # Create a figure with subplots for each layer
-        fig, axes = plt.subplots(len(results), 2, figsize=(15, 4 * len(results)))
+        fig, axes = plt.subplots(2, len(results), figsize=(15, 8))
         
         for i, (layer_name, layer_data) in enumerate(results.items()):
             # Plot activation map
-            axes[i, 0].imshow(layer_data['activation_map'].numpy(), cmap='jet')
-            axes[i, 0].set_title(f"{layer_name} Activation Map")
+            axes[0, i].imshow(layer_data['activation_map'].numpy(), cmap='jet')
+            axes[0, i].set_title(f"{layer_name} Activation Map")
             
             # Plot original image with top activations
-            axes[i, 1].imshow(self.input_tensor.squeeze().permute(1, 2, 0).numpy())
+            axes[1, i].imshow(self.input_tensor.squeeze().permute(1, 2, 0).numpy())
             for y, x in layer_data['top_coords_scaled']:
-                axes[i, 1].scatter(x, y, color='red', marker='x', s=20)
-            axes[i, 1].set_title(f"{layer_name} Top Activations")
+                axes[1, i].scatter(x, y, color='red', marker='x', s=20)
+            axes[1, i].set_title(f"{layer_name} Top Activations")
             
         plt.tight_layout()
         plt.show()
 
+
 def main():
-    # Create visualizer instance
-    visualizer = FeatureMapVisualizer()
+    # Setup GUI for file selection
+    root = tk.Tk()
+    root.withdraw()  # Hide the root window
     
-    # Analyze image with all conv layers
+    print("Select an image file for analysis:")
     image_path = filedialog.askopenfilename()
-    all_layer_results = visualizer.analyze_all_conv_layers(image_path, k=50)
     
-    # Visualize results from all layers
-    visualizer.visualize_all_layers(all_layer_results)
+    if not image_path:
+        print("No image selected, exiting.")
+        return
     
-    # You can also use the original single-layer analysis
-    # visualizer = FeatureMapVisualizer(target_layer='conv5', layer_index=8)
-    # visualizer.analyze_image(image_path, k=100)
+    print("Choose analysis mode:")
+    print("1. Single Layer Analysis")
+    print("2. Multi-Layer Analysis")
+    mode = input("Enter choice (1 or 2): ")
+    
+    if mode == "1":
+        # Single layer analysis
+        layer_choices = {
+            "1": ("conv1", 0),
+            "2": ("conv2", 3),
+            "3": ("conv3", 6),
+            "4": ("conv4", 8),
+            "5": ("conv5", 10)
+        }
+        
+        print("Select convolutional layer:")
+        for key, (name, _) in layer_choices.items():
+            print(f"{key}. {name}")
+        
+        layer_choice = input("Enter choice (1-5): ")
+        if layer_choice in layer_choices:
+            layer_name, layer_idx = layer_choices[layer_choice]
+            visualizer = SingleLayerVisualizer(target_layer=layer_name, layer_index=layer_idx)
+            k = int(input("Number of top activations to find (default 100): ") or 100)
+            visualizer.analyze_image(image_path, k=k)
+        else:
+            print("Invalid layer choice. Using default conv2.")
+            visualizer = SingleLayerVisualizer()
+            visualizer.analyze_image(image_path)
+    else:
+        # Multi-layer analysis
+        visualizer = MultiLayerVisualizer()
+        k = int(input("Number of top activations to find per layer (default 50): ") or 50)
+        all_layer_results = visualizer.analyze_all_conv_layers(image_path, k=k)
+        visualizer.visualize_all_layers(all_layer_results)
+
 
 if __name__ == "__main__":
     main()
