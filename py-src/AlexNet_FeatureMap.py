@@ -166,23 +166,22 @@ class SingleLayerVisualizer:
         self.visualize_activation_map(top_coords)
         self.visualize_image_with_activations(top_coords_scaled)
 
-
 class MultiLayerVisualizer:
     def __init__(self):
         """Initialize the feature map visualizer with the AlexNet model for multi-layer analysis"""
         self.model = models.alexnet(weights=AlexNet_Weights.DEFAULT)
         self.model.eval()
         
-        # Extract convolutional layers
+        # Extract convolutional layers only, don't take classification layers
         self.features = self.model.features
         
         # Define all conv layers in AlexNet
         self.conv_layers = {
             'conv1': 0,
             'conv2': 3,
-            'conv3': 6,
-            'conv4': 8,
-            'conv5': 10
+            'conv3': 8,
+            'conv4': 10,
+            'conv5': 12
         }
         
         # Image preprocessing
@@ -261,7 +260,10 @@ class MultiLayerVisualizer:
             
             # Get top k activations
             flattened = max_channel.flatten()
-            top_values, top_indices = torch.topk(flattened, k=k)
+            # Determine k value for this layer based on layer number
+            layer_num = int(layer_name.replace('conv', ''))
+            layer_k = max(1, k // layer_num)  # Ensure k is at least 1
+            top_values, top_indices = torch.topk(flattened, k=layer_k)
             
             # Convert flat indices to 2D coordinates
             h, w = max_channel.shape
@@ -337,8 +339,8 @@ def main():
     print("Choose analysis mode:")
     print("1. Single Layer Analysis")
     print("2. Multi-Layer Analysis")
-    mode = input("Enter choice (1 or 2): ")
-    
+    # mode = input("Enter choice (1 or 2): ")
+    mode = 2
     if mode == "1":
         # Single layer analysis
         layer_choices = {
@@ -366,9 +368,10 @@ def main():
     else:
         # Multi-layer analysis
         visualizer = MultiLayerVisualizer()
-        k = int(input("Number of top activations to find per layer (default 50): ") or 50)
+        # k = int(input("Number of top activations to find per layer (default 50): ") or 50)
+        k= 50
         all_layer_results = visualizer.analyze_all_conv_layers(image_path, k=k)
-        visualizer.visualize_all_layers(all_layer_results)
+        visualizer.visualize_all_layers(all_layer_results)  
 
 
 if __name__ == "__main__":
