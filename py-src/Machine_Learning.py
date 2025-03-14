@@ -2,6 +2,7 @@ import cv2
 import tkinter as tk
 from tkinter import filedialog
 from torchvision.models import alexnet
+import matplotlib.pyplot as plt
 from torch import nn
 import numpy as np
 import torch
@@ -53,7 +54,6 @@ class DataProcessing:
             
         return denoised_image
 
-
     @staticmethod
     def visualize_image(image):
         """
@@ -95,6 +95,7 @@ class FeatureExtraction:
         - Extracted features (numpy array).
         """
         image = cv2.resize(image, (224, 224))  # Resize to match AlexNet input size
+        DataProcessing.visualize_image(image)
         image = np.transpose(image, (2, 0, 1))  # Change to (C, H, W) format
         image = torch.tensor(image, dtype=torch.float32)  # Convert to tensor
         image = image.unsqueeze(0)  # Add batch dimension
@@ -104,81 +105,47 @@ class FeatureExtraction:
     
     @staticmethod
     def visualize_features(image, features):
-        """
-        Display the input image and extracted features.
-
-        Parameters:
-        - image: Input image (numpy array).
-        - features: Extracted features (torch tensor).
-        """
         # Convert features to numpy for processing
         activation_maps = features.squeeze().cpu().numpy()
         
-        # Get the number of feature maps
-        num_maps = activation_maps.shape[0]
-        
         # Store results
         results = {
-            'activation_maps': activation_maps,
             'peak_locations': [],
-            'pattern_info': {}
         }
-        
-        # Process each activation map to find peaks
-        for i in range(num_maps):
-            # Get current feature map
-            feature_map = activation_maps[i]
+
+        # Find peak locations for each activation map
+        for i, activation_map in enumerate(activation_maps):
+            # Find the index of the maximum value
+            max_index = activation_map.argmax()
             
-            # Apply threshold to highlight strong activations
-            threshold = np.mean(feature_map) + 1.5 * np.std(feature_map)
+            # Convert flat index to 2D coordinates (row, col)
+            h, w = activation_map.shape
+            y, x = max_index // w, max_index % w
             
-            # Find peaks (local maxima)
-            # Using simple dilation method to identify local maxima
-            kernel = np.ones((3, 3), np.uint8)
-            dilated = cv2.dilate(feature_map, kernel)
-            peaks = (feature_map == dilated) & (feature_map > threshold)
-            peak_coords = np.column_stack(np.where(peaks))
-            
-            if len(peak_coords) > 0:
-                results['peak_locations'].append({
-                    'map_index': i,
-                    'coordinates': peak_coords
-                })
-            
-            # Analyze pattern structure if there are enough peaks
-            if len(peak_coords) >= 2:
-                # Calculate distances between consecutive peaks
-                distances = np.sqrt(np.sum(np.diff(peak_coords, axis=0)**2, axis=1))
-                
-                # Store pattern information in the results dictionary
-                results['pattern_info'][i] = {
-                    'avg_distance': float(np.mean(distances)),
-                    'std_distance': float(np.std(distances)),
-                    'regularity': float(1.0 / (1.0 + np.std(distances)/np.mean(distances) if np.mean(distances) > 0 else 1.0)),
-                    'num_peaks': int(len(peak_coords))
-                }
-                
-                # Convert numpy arrays to lists for JSON serialization
-                if i == 0:  # Only need to do this once
-                    # Convert the main activation maps to a serializable format
-                    results['activation_maps'] = results['activation_maps'].tolist()
-                
-                # Convert peak coordinates to a serializable format
-                for peak_loc in results['peak_locations']:
-                    if isinstance(peak_loc['coordinates'], np.ndarray):
-                        peak_loc['coordinates'] = peak_loc['coordinates'].tolist()
-        
+            orig_width, orig_height = 224, 224
+            peak_coords_scaled = (int((y / h)* orig_height),int((x / w)* orig_width))
+
+            # Add to results with feature map index
+            results['peak_locations'].append({
+                'feature_map': i,
+                'position': peak_coords_scaled,
+                'value': activation_map[y, x]
+            })
+
+        for peak_data in results['peak_locations']:
+            y, x = peak_data['position']
+            cv2.circle(image, (x, y), 2, (0, 255, 0), 2)
+        DataProcessing.visualize_image(image)
+
+        # Create a copy of the original image for visualization
+        bis_image = cv2.resize(image.copy(), (224, 224))
+        DataProcessing.visualize_image(bis_image)
+    
+          
         return results
     
     @staticmethod
     def save_as_json(data, filename):
-        """
-        Save the input data as a JSON file.
-
-        Parameters:
-        - data: Input data (dictionary).
-        - filename: Output JSON file name.
-        """
         with open(filename, 'w') as f:
             json.dump(data, f, indent=4)
 
@@ -435,16 +402,16 @@ class Pipeline:
 
         # Preprocessing image
         denoised_image = DataProcessing.noise_removal(image)
+        DataProcessing.visualize_image(image)
         DataProcessing.visualize_image(denoised_image)
 
         # Feature extraction
         model = FeatureExtraction.CNN_model_selection()
         features = FeatureExtraction.features_extraction(model, denoised_image)
-        print(features.shape)
-        print(features)
         result = FeatureExtraction.visualize_features(image, features)
-        FeatureExtraction.save_as_json(result, "results.json")
+        # FeatureExtraction.save_as_json(result, "results.json")
         print(result)
+        print(type(result))
 
 
    
