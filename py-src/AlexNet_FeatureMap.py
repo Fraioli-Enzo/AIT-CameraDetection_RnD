@@ -6,6 +6,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import tkinter as tk
 from tkinter import filedialog
+import torch.nn as nn
 
 class SingleLayerVisualizer:
     def __init__(self, target_layer='conv2', layer_index=3):
@@ -166,8 +167,66 @@ class SingleLayerVisualizer:
         self.visualize_activation_map(top_coords)
         self.visualize_image_with_activations(top_coords_scaled)
 
+class SPPLayer(nn.Module):
+    def __init__(self, levels):
+        super(SPPLayer, self).__init__()
+        self.levels = levels
+
+    def forward(self, x):
+        num_samples, num_channels, h, w = x.size()
+        pyramid = []
+        for level in self.levels:
+            kernel_size = (h // level, w // level)
+            stride = kernel_size
+            pooling = nn.AdaptiveMaxPool2d(kernel_size)
+            pyramid.append(pooling(x).view(num_samples, -1))
+        return torch.cat(pyramid, dim=1)
+    
+class SingleLayerVisualizer:
+    def __init__(self, target_layer='conv2', layer_index=3, spp_levels=[1, 2, 4]):
+        """
+        Initialize the feature map visualizer with the AlexNet model for single layer analysis
+        
+        Args:
+            target_layer (str): Name of the target layer for visualization
+            layer_index (int): Index of the layer in AlexNet features
+            spp_levels (list): Levels for the SPP layer
+        """
+        self.model = models.alexnet(weights=AlexNet_Weights.DEFAULT)
+        self.model.eval()
+        
+        # Extract convolutional layers only
+        self.features = self.model.features
+        self.layer_name = target_layer
+        self.layer_index = layer_index
+        self.activation = {}
+        
+        # Register hook
+        self.features[layer_index].register_forward_hook(self._get_activation_hook())
+        
+        # Image preprocessing
+        self.transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+        ])
+        
+        # SPP layer
+        self.spp = SPPLayer(spp_levels)
+    
+    def extract_features(self):
+        """Extract features using the model"""
+        with torch.no_grad():
+            self.features(self.input_tensor)
+        
+        # Extract the activation map from the target layer
+        self.activation_map = self.activation[self.layer_name].squeeze(0)
+        
+        # Apply SPP layer
+        self.spp_features = self.spp(self.activation_map.unsqueeze(0))
+        return self.activation_map
+    
 class MultiLayerVisualizer:
-    def __init__(self):
+    def __init__(self, spp_levels=[1, 2, 4]):
         """Initialize the feature map visualizer with the AlexNet model for multi-layer analysis"""
         self.model = models.alexnet(weights=AlexNet_Weights.DEFAULT)
         self.model.eval()
@@ -191,6 +250,21 @@ class MultiLayerVisualizer:
         ])
         
         self.activation = {}
+        
+        # SPP layer
+        self.spp = SPPLayer(spp_levels)
+    
+    def extract_features(self):
+        """Extract features using the model"""
+        with torch.no_grad():
+            self.features(self.input_tensor)
+        
+        # Extract the activation map from the target layer
+        self.activation_map = self.activation[self.layer_name].squeeze(0)
+        
+        # Apply SPP layer
+        self.spp_features = self.spp(self.activation_map.unsqueeze(0))
+        return self.activation_map
     
     def load_image(self, image_path):
         """
