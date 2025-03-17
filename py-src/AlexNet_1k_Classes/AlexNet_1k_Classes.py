@@ -118,26 +118,31 @@ class ImageClassifier:
 
 def main():
     tk.Tk().withdraw()  # Hide the main window
-    # Example usage
+
+    print("Initializing AlexNet model please wait.")
     classifier = ImageClassifier()
-    
-    # Single image classification
-    image_path = filedialog.askopenfilename()
-    if os.path.exists(image_path):
-        results = classifier.predict(image_path)
-        print(f"Results for {image_path}:")
-        for class_name, probability in results:
-            print(f"{class_name}: {probability:.4f}")
-    
-    # # Batch classification
-    # image_dir = filedialog.askdirectory()
-    # if os.path.isdir(image_dir):
-    #     batch_results = classifier.batch_predict(image_dir)
-    #     print(f"\nBatch results for directory {image_dir}:")
-    #     for filename, predictions in batch_results.items():
-    #         print(f"\n{filename}:")
-    #         for class_name, probability in predictions:
-    #             print(f"{class_name}: {probability:.4f}")
+    print("AlexNet model initialized.")
+
+    mode = int(input("Enter '1' for single image classification or '2' for folder classification: "))
+    if mode == 1:
+        # Single image classification
+        image_path = filedialog.askopenfilename()
+        if os.path.exists(image_path):
+            results = classifier.predict(image_path)
+            print(f"Results for {image_path}:")
+            for class_name, probability in results:
+                print(f"{class_name}: {probability:.4f}")
+
+    elif mode == 2:
+        # Batch classification
+        image_dir = filedialog.askdirectory()
+        if os.path.isdir(image_dir):
+            batch_results = classifier.batch_predict(image_dir)
+            print(f"\nBatch results for directory {image_dir}:")
+            for filename, predictions in batch_results.items():
+                print(f"\n{filename}:")
+                for class_name, probability in predictions:
+                    print(f"{class_name}: {probability:.4f}")
 
 
 if __name__ == "__main__":
