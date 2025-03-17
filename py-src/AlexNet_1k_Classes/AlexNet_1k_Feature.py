@@ -117,6 +117,16 @@ class ImageClassifier:
                 
         return results
     
+class AlexNetFeatureExtractor:
+    def __init__(self, classifier):
+        """
+        Initialize the feature extractor with a reference to the classifier.
+        
+        Args:
+            classifier (ImageClassifier): An instance of the ImageClassifier class
+        """
+        self.classifier = classifier
+    
     def visualize_first_layer_features(self, image_path, output_dir="py-src/AlexNet_1k_Classes/feature_maps"):
         """
         Visualize the feature maps from the first convolutional layer for a given image.
@@ -132,10 +142,10 @@ class ImageClassifier:
         os.makedirs(output_dir, exist_ok=True)
         
         # Load and preprocess the image
-        img_tensor = self.load_image(image_path)
+        img_tensor = self.classifier.load_image(image_path)
         
         # Get the first convolutional layer
-        first_conv = self.model.features[0]
+        first_conv = self.classifier.model.features[0]
         
         # Create a model that outputs the activations of the first conv layer
         feature_extractor = torch.nn.Sequential(first_conv)
@@ -162,11 +172,14 @@ class ImageClassifier:
             plt.title(f"Filter {i+1}")
             plt.axis('off')
         
-        # Save the figure
-        output_path = os.path.join(output_dir, f"{os.path.basename(image_path).split('.')[0]}_features.png")
-        plt.tight_layout()
-        plt.savefig(output_path)
-        plt.close()
+        plt.show()
+
+        # # Save the figure
+        # output_path = os.path.join(output_dir, f"{os.path.basename(image_path).split('.')[0]}_features.png")
+        output_path = 'Change this to the path of the output image'
+        # plt.tight_layout()
+        # plt.savefig(output_path)
+        # plt.close()
         
         print(f"Feature maps saved to {output_path}")
         return output_path
@@ -178,6 +191,7 @@ def main():
 
     print("\033[31mInitializing AlexNet model please wait.\033[0m")
     classifier = ImageClassifier()
+    feature_extractor = AlexNetFeatureExtractor(classifier)
     print("\033[32mAlexNet model initialized.\033[0m")  # Print in green color
 
     print("\nOptions:")
@@ -210,7 +224,7 @@ def main():
         # Feature visualization
         image_path = filedialog.askopenfilename()
         if os.path.exists(image_path):
-            output_path = classifier.visualize_first_layer_features(image_path, "py-src/AlexNet_1k_Classes/feature_maps")
+            output_path = feature_extractor.visualize_first_layer_features(image_path, "py-src/AlexNet_1k_Classes/feature_maps")
             print(f"Visualization complete! Check the output at: {output_path}")
 
 if __name__ == "__main__":
