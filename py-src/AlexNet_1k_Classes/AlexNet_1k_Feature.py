@@ -3,6 +3,7 @@ import torch
 import tkinter as tk
 from PIL import Image
 from tkinter import filedialog
+import matplotlib.pyplot as plt
 import torchvision.models as models
 import torchvision.transforms as transforms
 from torchvision.models import AlexNet_Weights
@@ -115,15 +116,76 @@ class ImageClassifier:
                 print(f"Error processing {filename}: {e}")
                 
         return results
+    
+    def visualize_first_layer_features(self, image_path, output_dir="py-src/AlexNet_1k_Classes/feature_maps"):
+        """
+        Visualize the feature maps from the first convolutional layer for a given image.
+        
+        Args:
+            image_path (str): Path to the image file
+            output_dir (str): Directory to save the feature maps
+        
+        Returns:
+            str: Path to the directory containing the saved feature maps
+        """
+        # Create output directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Load and preprocess the image
+        img_tensor = self.load_image(image_path)
+        
+        # Get the first convolutional layer
+        first_conv = self.model.features[0]
+        
+        # Create a model that outputs the activations of the first conv layer
+        feature_extractor = torch.nn.Sequential(first_conv)
+        
+        # Extract features
+        with torch.no_grad():
+            features = feature_extractor(img_tensor)
+        
+        # Convert to numpy for visualization
+        feature_maps = features.squeeze(0).cpu().numpy()
+        
+        # Plot the original image
+        img = Image.open(image_path)
+        plt.figure(figsize=(12, 12))
+        plt.subplot(8, 8, 1)
+        plt.imshow(img)
+        plt.title("Original Image")
+        plt.axis('off')
+        
+        # Plot the feature maps (AlexNet's first layer has 64 filters)
+        for i in range(min(63, feature_maps.shape[0])):
+            plt.subplot(8, 8, i+2)
+            plt.imshow(feature_maps[i], cmap='viridis')
+            plt.title(f"Filter {i+1}")
+            plt.axis('off')
+        
+        # Save the figure
+        output_path = os.path.join(output_dir, f"{os.path.basename(image_path).split('.')[0]}_features.png")
+        plt.tight_layout()
+        plt.savefig(output_path)
+        plt.close()
+        
+        print(f"Feature maps saved to {output_path}")
+        return output_path
+
+
 
 def main():
     tk.Tk().withdraw()  # Hide the main window
 
-    print("Initializing AlexNet model please wait.")
+    print("\033[31mInitializing AlexNet model please wait.\033[0m")
     classifier = ImageClassifier()
-    print("AlexNet model initialized.")
+    print("\033[32mAlexNet model initialized.\033[0m")  # Print in green color
 
-    mode = int(input("Enter '1' for single image classification or '2' for folder classification: "))
+    print("\nOptions:")
+    print("1: Single image classification")
+    print("2: Folder classification")
+    print("3: Visualize first conv layer features")
+    
+    mode = int(input("Enter your choice (1-3): "))
     if mode == 1:
         # Single image classification
         image_path = filedialog.askopenfilename()
@@ -144,6 +206,12 @@ def main():
                 for class_name, probability in predictions:
                     print(f"{class_name}: {probability:.4f}")
 
+    elif mode == 3:
+        # Feature visualization
+        image_path = filedialog.askopenfilename()
+        if os.path.exists(image_path):
+            output_path = classifier.visualize_first_layer_features(image_path, "py-src/AlexNet_1k_Classes/feature_maps")
+            print(f"Visualization complete! Check the output at: {output_path}")
 
 if __name__ == "__main__":
     main()
