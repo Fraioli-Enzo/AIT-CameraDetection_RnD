@@ -1,5 +1,6 @@
 import os
 import torch
+import numpy as np
 import tkinter as tk
 from PIL import Image
 from tkinter import filedialog
@@ -127,16 +128,16 @@ class AlexNetFeatureExtractor:
         """
         self.classifier = classifier
     
-    def visualize_first_layer_features(self, image_path, output_dir="py-src/AlexNet_1k_Classes/feature_maps"):
+    def visualize_first_layer_features(self, image_path, output_dir="py-src/AlexNet_1k_Classes/feature_maps", threshold_percentile=80):
         """
-        Visualize the feature maps from the first convolutional layer for a given image.
+        Visualize the feature maps from all convolutional layers for a given image.
         
         Args:
             image_path (str): Path to the image file
             output_dir (str): Directory to save the feature maps
         
         Returns:
-            str: Path to the directory containing the saved feature maps
+            list: Paths to the saved feature maps for each layer
         """
         # Create output directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
@@ -144,46 +145,65 @@ class AlexNetFeatureExtractor:
         # Load and preprocess the image
         img_tensor = self.classifier.load_image(image_path)
         
-        # Get the first convolutional layer
-        first_conv = self.classifier.model.features[0]
+        # Indices of convolutional layers in AlexNet
+        conv_indices = [0, 3, 6, 8, 10]
         
-        # Create a model that outputs the activations of the first conv layer
-        feature_extractor = torch.nn.Sequential(first_conv)
+        output_paths = []
+
+        output_dir_features = os.path.join(output_dir, os.path.basename(image_path).split('.')[0])
+        os.makedirs(output_dir_features, exist_ok=True)
         
-        # Extract features
-        with torch.no_grad():
-            features = feature_extractor(img_tensor)
-        
-        # Convert to numpy for visualization
-        feature_maps = features.squeeze(0).cpu().numpy()
-        
-        # Plot the original image
-        img = Image.open(image_path)
-        plt.figure(figsize=(12, 12))
-        plt.subplot(8, 8, 1)
-        plt.imshow(img)
-        plt.title("Original Image")
-        plt.axis('off')
-        
-        # Plot the feature maps (AlexNet's first layer has 64 filters)
-        for i in range(min(63, feature_maps.shape[0])):
-            plt.subplot(8, 8, i+2)
-            plt.imshow(feature_maps[i], cmap='viridis')
-            plt.title(f"Filter {i+1}")
+        for layer_idx in conv_indices:
+            # Create a model that outputs the activations up to this conv layer
+            feature_extractor = torch.nn.Sequential(*list(self.classifier.model.features[:layer_idx+1]))
+            
+            # Extract features
+            with torch.no_grad():
+                features = feature_extractor(img_tensor)
+            
+            # Convert to numpy for visualization
+            feature_maps = features.squeeze(0).cpu().numpy()
+            
+            # Plot the original image
+            img = Image.open(image_path)
+            plt.figure(figsize=(12, 12))
+            plt.subplot(8, 8, 1)
+            plt.imshow(img)
+            plt.title("Original Image")
             plt.axis('off')
+            
+            # Plot the feature maps (show up to 63 filters)
+            num_maps = min(63, feature_maps.shape[0])
+            for i in range(num_maps):
+                plt.subplot(8, 8, i+2)
+                
+                # Get current feature map
+                feature_map = feature_maps[i]
+                # Calculate threshold based on percentile
+                threshold = np.percentile(feature_map, threshold_percentile)
+                # Create a masked version showing only bright spots
+                masked_map = np.copy(feature_map)
+                masked_map[masked_map < threshold] = np.nan  # Set below-threshold to NaN (will be transparent)
+                # Create a custom colormap with transparency for low values
+                cmap = plt.cm.viridis.copy()
+                cmap.set_bad('white', alpha=0)  # NaN values become transparent
+                
+                # Plot with transparency for low values
+                plt.imshow(masked_map, cmap=cmap)
+                plt.title(f"Filter {i+1}")
+                plt.axis('off')
+            
+            # Save the figure
+            layer_name = f"layer_{layer_idx}"
+            output_path = os.path.join(output_dir_features, f"{os.path.basename(image_path).split('.')[0]}_{layer_name}_features.png")
+            plt.tight_layout()
+            plt.savefig(output_path)
+            plt.close()
+            
+            print(f"Feature maps for layer {layer_idx} saved to {output_path}")
+            output_paths.append(output_path)
         
-        plt.show()
-
-        # # Save the figure
-        # output_path = os.path.join(output_dir, f"{os.path.basename(image_path).split('.')[0]}_features.png")
-        output_path = 'Change this to the path of the output image'
-        # plt.tight_layout()
-        # plt.savefig(output_path)
-        # plt.close()
-        
-        print(f"Feature maps saved to {output_path}")
-        return output_path
-
+        return output_paths
 
 
 def main():
@@ -225,7 +245,7 @@ def main():
         image_path = filedialog.askopenfilename()
         if os.path.exists(image_path):
             output_path = feature_extractor.visualize_first_layer_features(image_path, "py-src/AlexNet_1k_Classes/feature_maps")
-            print(f"Visualization complete! Check the output at: {output_path}")
+            print(f"Visualization complete! Check the output at: features_maps")
 
 if __name__ == "__main__":
     main()
