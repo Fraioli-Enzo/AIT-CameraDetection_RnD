@@ -413,45 +413,6 @@ class PeriodicityAnalyzer:
             'features': all_features
         }
 
-    def cluster_by_periodicity(self, similarity_results, num_clusters=3):
-        """
-        Cluster images based on their periodicity patterns.
-        
-        Args:
-            similarity_results (dict): Results from calculate_periodicity_similarity
-            num_clusters (int): Number of clusters to create
-            
-        Returns:
-            dict: Clusters of similar images
-        """
-        from sklearn.cluster import AgglomerativeClustering
-        import numpy as np
-        
-        # Extract image paths
-        image_paths = list(similarity_results['features'].keys())
-        
-        # Create feature matrix for clustering
-        feature_matrix = np.array([similarity_results['features'][img]['features'] for img in image_paths])
-        
-        # Normalize features
-        feature_mean = np.mean(feature_matrix, axis=0)
-        feature_std = np.std(feature_matrix, axis=0)
-        feature_std[feature_std == 0] = 1  # Avoid division by zero
-        normalized_features = (feature_matrix - feature_mean) / feature_std
-        
-        # Apply clustering
-        clustering = AgglomerativeClustering(n_clusters=num_clusters)
-        cluster_labels = clustering.fit_predict(normalized_features)
-        
-        # Organize results by cluster
-        clusters = {}
-        for i, label in enumerate(cluster_labels):
-            if label not in clusters:
-                clusters[label] = []
-            clusters[label].append(image_paths[i])
-        
-        return clusters
-
     def visualize_periodicity_map(self, image_path, layer_idx=0, output_dir="py-src/AlexNet_1k_Classes/periodicity_maps"):
         """
         Create a visualization that highlights periodic patterns in the original image.
@@ -673,87 +634,6 @@ class PeriodicityAnalyzer:
             'direction_summaries': direction_summaries
         }
 
-    def analyze_image_set(self, image_dir, output_dir="py-src/AlexNet_1k_Classes/periodicity_analysis"):
-        """
-        Perform complete periodicity analysis on a set of images.
-        
-        Args:
-            image_dir (str): Directory containing images to analyze
-            output_dir (str): Directory to save analysis results
-            
-        Returns:
-            dict: Complete analysis results
-        """
-        import os
-        import json
-        
-        # Create output directory
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Find valid images
-        valid_extensions = ['.jpg', '.jpeg', '.png', '.bmp']
-        image_paths = []
-        for filename in os.listdir(image_dir):
-            if any(filename.lower().endswith(ext) for ext in valid_extensions):
-                image_paths.append(os.path.join(image_dir, filename))
-        
-        print(f"Found {len(image_paths)} images for analysis")
-        
-        # Analyze periodicity features
-        print("Calculating periodicity features and similarities...")
-        similarity_results = self.calculate_periodicity_similarity(image_paths)
-        
-        # Cluster images
-        print("Clustering images by periodicity patterns...")
-        clusters = self.cluster_by_periodicity(similarity_results)
-        
-        # Create visualizations for each image
-        print("Creating visualizations...")
-        for img_path in image_paths:
-            self.visualize_periodicity_map(img_path, output_dir=os.path.join(output_dir, "maps"))
-        
-        # Extract detailed periodicity information
-        print("Extracting dominant periodicities...")
-        periodicity_details = {}
-        for img_path in image_paths:
-            periodicity_details[img_path] = self.extract_dominant_periodicities(img_path)
-        
-        # Save analysis results
-        results = {
-            'clusters': clusters,
-            'periodicity_details': {os.path.basename(k): v for k, v in periodicity_details.items()}
-        }
-        
-        # Create human-readable summary
-        summary_path = os.path.join(output_dir, "periodicity_summary.txt")
-        with open(summary_path, 'w') as f:
-            f.write("PERIODICITY ANALYSIS SUMMARY\n")
-            f.write("===========================\n\n")
-            
-            # Cluster information
-            f.write(f"Found {len(clusters)} clusters of images with similar periodicity patterns:\n\n")
-            for cluster_idx, images in clusters.items():
-                f.write(f"Cluster {cluster_idx+1}: {len(images)} images\n")
-                for img in images:
-                    f.write(f"  - {os.path.basename(img)}\n")
-                f.write("\n")
-            
-            # Periodicity information
-            f.write("Dominant Periodicity Patterns:\n")
-            f.write("=============================\n\n")
-            
-            for img_path, details in periodicity_details.items():
-                f.write(f"Image: {os.path.basename(img_path)}\n")
-                f.write("  Dominant directions:\n")
-                for i, dir_info in enumerate(details['direction_summaries'][:3]):
-                    f.write(f"    {i+1}. {dir_info['angle']}° - " + 
-                           f"period: {dir_info['avg_period']:.1f} pixels, " + 
-                           f"strength: {dir_info['total_strength']:.1f}\n")
-                f.write("\n")
-        
-        print(f"Analysis complete! Summary saved to {summary_path}")
-        return results
-
 
 def main():
     tk.Tk().withdraw()  # Hide the main window
@@ -769,8 +649,7 @@ def main():
     print("2: Folder classification")
     print("3: Visualize first conv layer features")
     print("4: Analyze image periodicity")
-    print("5: Full periodicity analysis of image folder")
-    print("6: Compare periodicity between two images")
+    print("5: Compare periodicity between two images")
     
     mode = int(input("Enter your choice (1-6): "))
     if mode == 1:
@@ -818,13 +697,6 @@ def main():
             print(f"\nPeriodicity map saved to {map_path}")
             
     elif mode == 5:
-        # Full analysis of folder
-        image_dir = filedialog.askdirectory(title="Select folder with images")
-        if os.path.exists(image_dir):
-            print("Starting full periodicity analysis...")
-            periodicity_info.analyze_image_set(image_dir)
-            
-    elif mode == 6:
         # Compare two images
         print("Select first image:")
         img1 = filedialog.askopenfilename(title="Select first image")
