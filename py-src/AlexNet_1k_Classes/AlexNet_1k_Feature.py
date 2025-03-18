@@ -146,7 +146,7 @@ class AlexNetFeatureExtractor:
         img_tensor = self.classifier.load_image(image_path)
         
         # Indices of convolutional layers in AlexNet
-        conv_indices = [0, 3, 6, 8, 10]
+        conv_indices = [0, 3]
         
         output_paths = []
 
@@ -185,7 +185,7 @@ class AlexNetFeatureExtractor:
                 masked_map = np.copy(feature_map)
                 masked_map[masked_map < threshold] = np.nan  # Set below-threshold to NaN (will be transparent)
                 # Create a custom colormap with transparency for low values
-                cmap = plt.cm.viridis.copy()
+                cmap = plt.cm.gray.copy()
                 cmap.set_bad('white', alpha=0)  # NaN values become transparent
                 
                 # Plot with transparency for low values
@@ -205,6 +205,40 @@ class AlexNetFeatureExtractor:
         
         return output_paths
 
+    def combine_image(self, image_path1, image_path2, output_dir="py-src/AlexNet_1k_Classes/combine_feature_maps"):
+        Image1 = Image.open(image_path1)
+        Image2 = Image.open(image_path2)
+        # Ensure both images are in RGB mode
+        Image1 = Image1.convert('RGB')
+        Image2 = Image2.convert('RGB')
+
+        # Convert the images from black to red tint
+        def convert_to_red(img):
+            # Convert to numpy array
+            img_array = np.array(img)
+            # Keep only the red channel, zero out green and blue
+            red_img = img_array.copy()
+            red_img[:, :, 1] = 0  # Zero out green channel
+            red_img[:, :, 2] = 0  # Zero out blue channel
+            return Image.fromarray(red_img)
+
+        Image2 = convert_to_red(Image2)
+
+        # Make sure both images are the same size
+        width = max(Image1.width, Image2.width)
+        height = max(Image1.height, Image2.height)
+        Image1 = Image1.resize((width, height))
+        Image2 = Image2.resize((width, height))
+
+        # Create output directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Combine the images
+        supperposition = Image.blend(Image1, Image2, alpha=0.5)
+        output_path = os.path.join(output_dir, f"{os.path.basename(image_path1).split('.')[0]}_{os.path.basename(image_path2).split('.')[0]}_combined.png")
+        supperposition.save(output_path)
+        print(f"Combined image saved to {output_path}")
+
 
 def main():
     tk.Tk().withdraw()  # Hide the main window
@@ -218,8 +252,9 @@ def main():
     print("1: Single image classification")
     print("2: Folder classification")
     print("3: Visualize first conv layer features")
-    
-    mode = int(input("Enter your choice (1-3): "))
+    print("4: Combine two images for comparaison")
+
+    mode = int(input("Enter your choice (1-4): "))
     if mode == 1:
         # Single image classification
         image_path = filedialog.askopenfilename()
@@ -246,6 +281,14 @@ def main():
         if os.path.exists(image_path):
             output_path = feature_extractor.visualize_first_layer_features(image_path, "py-src/AlexNet_1k_Classes/feature_maps")
             print(f"Visualization complete! Check the output at: features_maps")
+
+    elif mode == 4:
+        # Feature visualization
+        image_path1 = filedialog.askopenfilename()
+        image_path2 = filedialog.askopenfilename()
+        if os.path.exists(image_path1) and os.path.exists(image_path2):
+            feature_extractor.combine_image(image_path1, image_path2, "py-src/AlexNet_1k_Classes/combine_feature_maps")
+
 
 if __name__ == "__main__":
     main()
