@@ -128,7 +128,7 @@ class AlexNetFeatureExtractor:
         """
         self.classifier = classifier
     
-    def visualize_first_layer_features(self, image_path, output_dir="py-src/AlexNet_1k_Classes/feature_maps", threshold_percentile=80):
+    def visualize_layer_features(self, image_path, output_dir="py-src/AlexNet_1k_Classes/feature_maps", threshold_percentile=80):
         """
         Visualize the feature maps from all convolutional layers for a given image.
         
@@ -239,6 +239,521 @@ class AlexNetFeatureExtractor:
         supperposition.save(output_path)
         print(f"Combined image saved to {output_path}")
 
+class PeriodicityAnalyzer:
+    def __init__(self, classifier):
+        """
+        Initialize the periodicity analyzer with a reference to the classifier.
+        
+        Args:
+            classifier (ImageClassifier): An instance of the ImageClassifier class
+        """
+        self.classifier = classifier
+
+    def analyze_periodicity(self, image_path, layer_indices=[0, 3], output_dir="py-src/AlexNet_1k_Classes/periodicity_analysis"):
+        """
+        Analyze periodicity in feature maps using Fourier Transform.
+        
+        Args:
+            image_path: Path to the image
+            layer_indices: Which CNN layers to analyze
+            
+        Returns:
+            Dictionary of periodicity metrics for each layer
+        """
+        # Create directories
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Process image
+        img_tensor = self.classifier.load_image(image_path)
+        
+        # Store results
+        results = {}
+        
+        # Original image for reference
+        original_img = Image.open(image_path)
+        
+        for layer_idx in layer_indices:
+            # Extract features from this layer
+            feature_extractor = torch.nn.Sequential(*list(self.classifier.model.features[:layer_idx+1]))
+            with torch.no_grad():
+                features = feature_extractor(img_tensor)
+                
+            # Convert to numpy
+            feature_maps = features.squeeze(0).cpu().numpy()
+            
+            # For each feature map in this layer
+            layer_results = []
+            
+            # Create a figure for visualization
+            plt.figure(figsize=(15, 10))
+            
+            # Plot a few representative feature maps and their frequency spectra
+            for i in range(min(5, feature_maps.shape[0])):
+                # Get feature map
+                feature_map = feature_maps[i]
+                
+                # Apply FFT
+                fft_result = np.fft.fft2(feature_map)
+                fft_shifted = np.fft.fftshift(fft_result)
+                magnitude_spectrum = 20*np.log(np.abs(fft_shifted) + 1)
+                
+                # Find peaks in frequency domain
+                from scipy.signal import find_peaks
+                # Flatten the 2D spectrum to find peaks
+                flat_spectrum = magnitude_spectrum.flatten()
+                peaks, _ = find_peaks(flat_spectrum, height=np.mean(flat_spectrum) + 2*np.std(flat_spectrum))
+                
+                # Store metrics about the peaks
+                peak_metrics = {
+                    'num_peaks': len(peaks),
+                    'peak_strength': np.mean([flat_spectrum[p] for p in peaks]) if len(peaks) > 0 else 0,
+                    'periodicity_score': len(peaks) * np.mean([flat_spectrum[p] for p in peaks]) if len(peaks) > 0 else 0
+                }
+                
+                layer_results.append(peak_metrics)
+                
+                # Visualize
+                plt.subplot(5, 3, i*3+1)
+                plt.imshow(feature_map, cmap='viridis')
+                plt.title(f"Filter {i+1}")
+                plt.axis('off')
+                
+                plt.subplot(5, 3, i*3+2)
+                plt.imshow(magnitude_spectrum, cmap='viridis')
+                plt.title(f"Frequency Spectrum")
+                plt.axis('off')
+                
+                # Plot original image with high-frequency areas highlighted
+                plt.subplot(5, 3, i*3+3)
+                plt.imshow(original_img)
+                
+                # Highlight periodic regions
+                # We need to transform peak locations back to spatial coordinates
+                # This is a complex topic, simplified here
+                plt.title(f"Periodicities: {peak_metrics['num_peaks']}")
+                plt.axis('off')
+            
+            # Save figure
+            plt.tight_layout()
+            plt.savefig(os.path.join(output_dir, f"periodicity_layer_{layer_idx}.png"))
+            plt.close()
+            
+            # Average results across feature maps
+            avg_results = {
+                'avg_num_peaks': np.mean([r['num_peaks'] for r in layer_results]),
+                'avg_peak_strength': np.mean([r['peak_strength'] for r in layer_results]),
+                'avg_periodicity_score': np.mean([r['periodicity_score'] for r in layer_results])
+            }
+            
+            results[f"layer_{layer_idx}"] = avg_results
+            
+        return results
+    
+    def calculate_periodicity_similarity(self, image_paths, layer_indices=[0, 3]):
+        """
+        Calculate similarity between images based on their periodicity features.
+        
+        Args:
+            image_paths (list): List of paths to images to compare
+            layer_indices (list): CNN layers to use for analysis
+            
+        Returns:
+            dict: Similarity matrix and periodicity features for each image
+        """
+        print("Analyzing periodicity patterns across images...")
+        
+        # Store features for each image
+        all_features = {}
+        
+        # Process each image
+        for i, img_path in enumerate(image_paths):
+            print(f"Processing image {i+1}/{len(image_paths)}: {os.path.basename(img_path)}")
+            
+            # Extract periodicity metrics
+            metrics = self.analyze_periodicity(img_path, layer_indices, 
+                                            output_dir=f"py-src/AlexNet_1k_Classes/periodicity_analysis/{os.path.basename(img_path).split('.')[0]}")
+            
+            # Flatten metrics into a feature vector
+            feature_vector = []
+            for layer_idx in layer_indices:
+                layer_key = f"layer_{layer_idx}"
+                if layer_key in metrics:
+                    feature_vector.extend([
+                        metrics[layer_key]['avg_num_peaks'],
+                        metrics[layer_key]['avg_peak_strength'],
+                        metrics[layer_key]['avg_periodicity_score']
+                    ])
+            
+            all_features[img_path] = {
+                'features': feature_vector,
+                'metrics': metrics
+            }
+        
+        # Calculate similarity matrix
+        similarity_matrix = {}
+        for img1 in image_paths:
+            similarity_matrix[img1] = {}
+            for img2 in image_paths:
+                if img1 == img2:
+                    similarity_matrix[img1][img2] = 1.0  # Self-similarity is 1.0
+                else:
+                    # Calculate cosine similarity between feature vectors
+                    v1 = np.array(all_features[img1]['features'])
+                    v2 = np.array(all_features[img2]['features'])
+                    
+                    if np.sum(v1) == 0 or np.sum(v2) == 0:
+                        similarity = 0.0
+                    else:
+                        similarity = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+                    
+                    similarity_matrix[img1][img2] = similarity
+        
+        return {
+            'similarity_matrix': similarity_matrix,
+            'features': all_features
+        }
+
+    def cluster_by_periodicity(self, similarity_results, num_clusters=3):
+        """
+        Cluster images based on their periodicity patterns.
+        
+        Args:
+            similarity_results (dict): Results from calculate_periodicity_similarity
+            num_clusters (int): Number of clusters to create
+            
+        Returns:
+            dict: Clusters of similar images
+        """
+        from sklearn.cluster import AgglomerativeClustering
+        import numpy as np
+        
+        # Extract image paths
+        image_paths = list(similarity_results['features'].keys())
+        
+        # Create feature matrix for clustering
+        feature_matrix = np.array([similarity_results['features'][img]['features'] for img in image_paths])
+        
+        # Normalize features
+        feature_mean = np.mean(feature_matrix, axis=0)
+        feature_std = np.std(feature_matrix, axis=0)
+        feature_std[feature_std == 0] = 1  # Avoid division by zero
+        normalized_features = (feature_matrix - feature_mean) / feature_std
+        
+        # Apply clustering
+        clustering = AgglomerativeClustering(n_clusters=num_clusters)
+        cluster_labels = clustering.fit_predict(normalized_features)
+        
+        # Organize results by cluster
+        clusters = {}
+        for i, label in enumerate(cluster_labels):
+            if label not in clusters:
+                clusters[label] = []
+            clusters[label].append(image_paths[i])
+        
+        return clusters
+
+    def visualize_periodicity_map(self, image_path, layer_idx=0, output_dir="py-src/AlexNet_1k_Classes/periodicity_maps"):
+        """
+        Create a visualization that highlights periodic patterns in the original image.
+        
+        Args:
+            image_path (str): Path to the image
+            layer_idx (int): Layer index to use for analysis
+            output_dir (str): Directory to save the visualization
+            
+        Returns:
+            str: Path to the saved visualization
+        """
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Load and process the image
+        img_tensor = self.classifier.load_image(image_path)
+        original_img = Image.open(image_path)
+        img_np = np.array(original_img)
+        
+        # Extract features for the specified layer
+        feature_extractor = torch.nn.Sequential(*list(self.classifier.model.features[:layer_idx+1]))
+        with torch.no_grad():
+            features = feature_extractor(img_tensor)
+        feature_maps = features.squeeze(0).cpu().numpy()
+        
+        # Create a composite periodicity map
+        periodicity_map = np.zeros((feature_maps.shape[1], feature_maps.shape[2]))
+        peak_strength_map = np.zeros_like(periodicity_map)
+        
+        # For each feature map
+        for i in range(feature_maps.shape[0]):
+            feature_map = feature_maps[i]
+            
+            # Apply FFT
+            fft_result = np.fft.fft2(feature_map)
+            fft_shifted = np.fft.fftshift(fft_result)
+            magnitude_spectrum = np.log(np.abs(fft_shifted) + 1)
+            
+            # Find peaks in frequency domain
+            from scipy.signal import find_peaks
+            flat_spectrum = magnitude_spectrum.flatten()
+            threshold = np.mean(flat_spectrum) + 2*np.std(flat_spectrum)
+            peaks, properties = find_peaks(flat_spectrum, height=threshold)
+            
+            if len(peaks) > 0:
+                # Reconstruct just the periodicity using inverse FFT
+                # Zero out non-peak frequencies
+                filtered_spectrum = np.zeros_like(fft_shifted, dtype=complex)
+                for p in peaks:
+                    # Convert 1D peak index back to 2D coordinates
+                    y, x = np.unravel_index(p, fft_shifted.shape)
+                    # Copy a small region around the peak
+                    window_size = 3
+                    y_min, y_max = max(0, y-window_size), min(fft_shifted.shape[0], y+window_size+1)
+                    x_min, x_max = max(0, x-window_size), min(fft_shifted.shape[1], x+window_size+1)
+                    filtered_spectrum[y_min:y_max, x_min:x_max] = fft_shifted[y_min:y_max, x_min:x_max]
+                
+                # Inverse FFT to get periodic component
+                inverse_fft = np.fft.ifft2(np.fft.ifftshift(filtered_spectrum))
+                periodic_component = np.abs(inverse_fft)
+                
+                # Normalize
+                if periodic_component.max() > 0:
+                    periodic_component = periodic_component / periodic_component.max()
+                
+                # Add to composite maps
+                peak_strength = np.sum(properties['peak_heights'])
+                periodicity_map += periodic_component * peak_strength
+                peak_strength_map += peak_strength
+        
+        # Normalize the composite map
+        if peak_strength_map.max() > 0:
+            periodicity_map = periodicity_map / peak_strength_map.max()
+        
+        # Resize to match original image
+        from scipy.ndimage import zoom
+        zoom_factors = (img_np.shape[0] / periodicity_map.shape[0], 
+                    img_np.shape[1] / periodicity_map.shape[1])
+        resized_map = zoom(periodicity_map, zoom_factors, order=1)
+        
+        # Create visualization
+        plt.figure(figsize=(15, 10))
+        
+        # Original image
+        plt.subplot(1, 3, 1)
+        plt.imshow(original_img)
+        plt.title("Original Image")
+        plt.axis('off')
+        
+        # Periodicity heatmap
+        plt.subplot(1, 3, 2)
+        plt.imshow(resized_map, cmap='hot')
+        plt.title("Periodicity Map")
+        plt.axis('off')
+        
+        # Overlay
+        plt.subplot(1, 3, 3)
+        plt.imshow(original_img)
+        plt.imshow(resized_map, cmap='hot', alpha=0.6)
+        plt.title("Overlay")
+        plt.axis('off')
+        
+        # Save the figure
+        output_path = os.path.join(output_dir, f"{os.path.basename(image_path).split('.')[0]}_periodicity_map.png")
+        plt.tight_layout()
+        plt.savefig(output_path)
+        plt.close()
+        
+        print(f"Periodicity map saved to {output_path}")
+        return output_path
+
+    def extract_dominant_periodicities(self, image_path, layer_idx=0):
+        """
+        Extract information about dominant periodic patterns in an image.
+        
+        Args:
+            image_path (str): Path to the image
+            layer_idx (int): Layer index to use for analysis
+            
+        Returns:
+            dict: Information about dominant periodicities
+        """
+        # Load and process the image
+        img_tensor = self.classifier.load_image(image_path)
+        
+        # Extract features
+        feature_extractor = torch.nn.Sequential(*list(self.classifier.model.features[:layer_idx+1]))
+        with torch.no_grad():
+            features = feature_extractor(img_tensor)
+        feature_maps = features.squeeze(0).cpu().numpy()
+        
+        # Collect periodicity information
+        periodicities = []
+        
+        # For each feature map
+        for i in range(feature_maps.shape[0]):
+            feature_map = feature_maps[i]
+            
+            # Apply FFT
+            fft_result = np.fft.fft2(feature_map)
+            fft_shifted = np.fft.fftshift(fft_result)
+            magnitude_spectrum = np.log(np.abs(fft_shifted) + 1)
+            
+            # Find peaks in frequency domain
+            from scipy.signal import find_peaks_cwt
+            from skimage.feature import peak_local_max
+            
+            # Find local maxima in 2D spectrum
+            coords = peak_local_max(magnitude_spectrum, 
+                                   min_distance=3, 
+                                   threshold_abs=np.mean(magnitude_spectrum) + 2*np.std(magnitude_spectrum),
+                                   exclude_border=False,
+                                   num_peaks=5)
+            
+            # Convert peak positions to frequency information
+            center_y, center_x = magnitude_spectrum.shape[0] // 2, magnitude_spectrum.shape[1] // 2
+            for y, x in coords:
+                # Skip the DC component (zero frequency) at the center
+                if abs(y - center_y) < 3 and abs(x - center_x) < 3:
+                    continue
+                    
+                # Calculate distance from center (frequency magnitude)
+                dx = x - center_x
+                dy = y - center_y
+                distance = np.sqrt(dx**2 + dy**2)
+                
+                # Calculate angle (direction of periodicity)
+                angle = np.degrees(np.arctan2(dy, dx)) % 180
+                
+                # Calculate period length in pixels
+                if distance > 0:
+                    period = max(feature_map.shape) / distance
+                else:
+                    period = float('inf')
+                
+                # Calculate strength of this periodicity
+                strength = magnitude_spectrum[y, x]
+                
+                periodicities.append({
+                    'filter_idx': i,
+                    'frequency': distance,
+                    'period': period,
+                    'angle': angle,
+                    'strength': strength,
+                    'peak_position': (y, x)
+                })
+        
+        # Sort by strength
+        periodicities.sort(key=lambda x: x['strength'], reverse=True)
+        
+        # Keep only top periodicities
+        top_periodicities = periodicities[:10]
+        
+        # Group by similar directions
+        direction_groups = {}
+        for p in top_periodicities:
+            angle_key = round(p['angle'] / 10) * 10  # Group by 10-degree bins
+            if angle_key not in direction_groups:
+                direction_groups[angle_key] = []
+            direction_groups[angle_key].append(p)
+        
+        # Calculate average for each direction
+        direction_summaries = []
+        for angle, group in direction_groups.items():
+            avg_period = np.mean([p['period'] for p in group])
+            total_strength = np.sum([p['strength'] for p in group])
+            direction_summaries.append({
+                'angle': angle,
+                'avg_period': avg_period,
+                'total_strength': total_strength,
+                'count': len(group)
+            })
+        
+        # Sort by strength
+        direction_summaries.sort(key=lambda x: x['total_strength'], reverse=True)
+        
+        return {
+            'top_periodicities': top_periodicities,
+            'direction_summaries': direction_summaries
+        }
+
+    def analyze_image_set(self, image_dir, output_dir="py-src/AlexNet_1k_Classes/periodicity_analysis"):
+        """
+        Perform complete periodicity analysis on a set of images.
+        
+        Args:
+            image_dir (str): Directory containing images to analyze
+            output_dir (str): Directory to save analysis results
+            
+        Returns:
+            dict: Complete analysis results
+        """
+        import os
+        import json
+        
+        # Create output directory
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Find valid images
+        valid_extensions = ['.jpg', '.jpeg', '.png', '.bmp']
+        image_paths = []
+        for filename in os.listdir(image_dir):
+            if any(filename.lower().endswith(ext) for ext in valid_extensions):
+                image_paths.append(os.path.join(image_dir, filename))
+        
+        print(f"Found {len(image_paths)} images for analysis")
+        
+        # Analyze periodicity features
+        print("Calculating periodicity features and similarities...")
+        similarity_results = self.calculate_periodicity_similarity(image_paths)
+        
+        # Cluster images
+        print("Clustering images by periodicity patterns...")
+        clusters = self.cluster_by_periodicity(similarity_results)
+        
+        # Create visualizations for each image
+        print("Creating visualizations...")
+        for img_path in image_paths:
+            self.visualize_periodicity_map(img_path, output_dir=os.path.join(output_dir, "maps"))
+        
+        # Extract detailed periodicity information
+        print("Extracting dominant periodicities...")
+        periodicity_details = {}
+        for img_path in image_paths:
+            periodicity_details[img_path] = self.extract_dominant_periodicities(img_path)
+        
+        # Save analysis results
+        results = {
+            'clusters': clusters,
+            'periodicity_details': {os.path.basename(k): v for k, v in periodicity_details.items()}
+        }
+        
+        # Create human-readable summary
+        summary_path = os.path.join(output_dir, "periodicity_summary.txt")
+        with open(summary_path, 'w') as f:
+            f.write("PERIODICITY ANALYSIS SUMMARY\n")
+            f.write("===========================\n\n")
+            
+            # Cluster information
+            f.write(f"Found {len(clusters)} clusters of images with similar periodicity patterns:\n\n")
+            for cluster_idx, images in clusters.items():
+                f.write(f"Cluster {cluster_idx+1}: {len(images)} images\n")
+                for img in images:
+                    f.write(f"  - {os.path.basename(img)}\n")
+                f.write("\n")
+            
+            # Periodicity information
+            f.write("Dominant Periodicity Patterns:\n")
+            f.write("=============================\n\n")
+            
+            for img_path, details in periodicity_details.items():
+                f.write(f"Image: {os.path.basename(img_path)}\n")
+                f.write("  Dominant directions:\n")
+                for i, dir_info in enumerate(details['direction_summaries'][:3]):
+                    f.write(f"    {i+1}. {dir_info['angle']}° - " + 
+                           f"period: {dir_info['avg_period']:.1f} pixels, " + 
+                           f"strength: {dir_info['total_strength']:.1f}\n")
+                f.write("\n")
+        
+        print(f"Analysis complete! Summary saved to {summary_path}")
+        return results
+
 
 def main():
     tk.Tk().withdraw()  # Hide the main window
@@ -246,15 +761,18 @@ def main():
     print("\033[31mInitializing AlexNet model please wait.\033[0m")
     classifier = ImageClassifier()
     feature_extractor = AlexNetFeatureExtractor(classifier)
+    periodicity_info = PeriodicityAnalyzer(classifier)
     print("\033[32mAlexNet model initialized.\033[0m")  # Print in green color
 
     print("\nOptions:")
     print("1: Single image classification")
     print("2: Folder classification")
     print("3: Visualize first conv layer features")
-    print("4: Combine two images for comparaison")
-
-    mode = int(input("Enter your choice (1-4): "))
+    print("4: Analyze image periodicity")
+    print("5: Full periodicity analysis of image folder")
+    print("6: Compare periodicity between two images")
+    
+    mode = int(input("Enter your choice (1-6): "))
     if mode == 1:
         # Single image classification
         image_path = filedialog.askopenfilename()
@@ -279,16 +797,51 @@ def main():
         # Feature visualization
         image_path = filedialog.askopenfilename()
         if os.path.exists(image_path):
-            output_path = feature_extractor.visualize_first_layer_features(image_path, "py-src/AlexNet_1k_Classes/feature_maps")
+            output_path = feature_extractor.visualize_layer_features(image_path, "py-src/AlexNet_1k_Classes/feature_maps")
             print(f"Visualization complete! Check the output at: features_maps")
 
     elif mode == 4:
-        # Feature visualization
-        image_path1 = filedialog.askopenfilename()
-        image_path2 = filedialog.askopenfilename()
-        if os.path.exists(image_path1) and os.path.exists(image_path2):
-            feature_extractor.combine_image(image_path1, image_path2, "py-src/AlexNet_1k_Classes/combine_feature_maps")
-
+        # Analyze single image periodicity
+        image_path = filedialog.askopenfilename(title="Select image to analyze")
+        if os.path.exists(image_path):
+            print("Creating periodicity map...")
+            map_path = periodicity_info.visualize_periodicity_map(image_path)
+            print("Extracting dominant periodicities...")
+            periodicity_info = periodicity_info.extract_dominant_periodicities(image_path)
+            
+            print("\nDominant Periodicity Patterns:")
+            for i, dir_info in enumerate(periodicity_info['direction_summaries'][:3]):
+                print(f"  {i+1}. Direction: {dir_info['angle']}° - " + 
+                     f"Period: {dir_info['avg_period']:.1f} pixels, " + 
+                     f"Strength: {dir_info['total_strength']:.1f}")
+            
+            print(f"\nPeriodicity map saved to {map_path}")
+            
+    elif mode == 5:
+        # Full analysis of folder
+        image_dir = filedialog.askdirectory(title="Select folder with images")
+        if os.path.exists(image_dir):
+            print("Starting full periodicity analysis...")
+            periodicity_info.analyze_image_set(image_dir)
+            
+    elif mode == 6:
+        # Compare two images
+        print("Select first image:")
+        img1 = filedialog.askopenfilename(title="Select first image")
+        print("Select second image:")
+        img2 = filedialog.askopenfilename(title="Select second image")
+        
+        if os.path.exists(img1) and os.path.exists(img2):
+            # Calculate similarity
+            sim_results = periodicity_info.calculate_periodicity_similarity([img1, img2])
+            similarity = sim_results['similarity_matrix'][img1][img2]
+            
+            print(f"\nPeriodicity pattern similarity: {similarity:.4f}")
+            print(f"(0 = completely different, 1 = identical patterns)")
+            
+            # Visualize both
+            periodicity_info.visualize_periodicity_map(img1)
+            periodicity_info.visualize_periodicity_map(img2)
 
 if __name__ == "__main__":
     main()

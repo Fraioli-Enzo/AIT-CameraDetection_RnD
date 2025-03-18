@@ -6,3 +6,5 @@ Images
 Research
 py-src/AlexNet_1k_Classes/feature_maps
 py-src/AlexNet_1k_Classes/combine_feature_maps
+py-src/AlexNet_1k_Classes/periodicity_analysis
+py-src/AlexNet_1k_Classes/periodicity_maps
