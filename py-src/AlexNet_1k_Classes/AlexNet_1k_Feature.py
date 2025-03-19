@@ -9,6 +9,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torchvision.models import AlexNet_Weights
 
+# Option 1 & 2
 class ImageClassifier:
     def __init__(self, model_name='alexnet'):
         """
@@ -118,6 +119,7 @@ class ImageClassifier:
                 
         return results
     
+# Option 3
 class AlexNetFeatureExtractor:
     def __init__(self, classifier):
         """
@@ -239,6 +241,7 @@ class AlexNetFeatureExtractor:
         supperposition.save(output_path)
         print(f"Combined image saved to {output_path}")
 
+# Option 4
 class PeriodicityAnalyzer:
     def __init__(self, classifier):
         """
@@ -249,106 +252,6 @@ class PeriodicityAnalyzer:
         """
         self.classifier = classifier
 
-    def analyze_periodicity(self, image_path, layer_indices=[0, 3], output_dir="py-src/AlexNet_1k_Classes/periodicity_analysis"):
-        """
-        Analyze periodicity in feature maps using Fourier Transform.
-        
-        Args:
-            image_path: Path to the image
-            layer_indices: Which CNN layers to analyze
-            
-        Returns:
-            Dictionary of periodicity metrics for each layer
-        """
-        # Create directories
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Process image
-        img_tensor = self.classifier.load_image(image_path)
-        
-        # Store results
-        results = {}
-        
-        # Original image for reference
-        original_img = Image.open(image_path)
-        
-        for layer_idx in layer_indices:
-            # Extract features from this layer
-            feature_extractor = torch.nn.Sequential(*list(self.classifier.model.features[:layer_idx+1]))
-            with torch.no_grad():
-                features = feature_extractor(img_tensor)
-                
-            # Convert to numpy
-            feature_maps = features.squeeze(0).cpu().numpy()
-            
-            # For each feature map in this layer
-            layer_results = []
-            
-            # Create a figure for visualization
-            plt.figure(figsize=(15, 10))
-            
-            # Plot a few representative feature maps and their frequency spectra
-            for i in range(min(5, feature_maps.shape[0])):
-                # Get feature map
-                feature_map = feature_maps[i]
-                
-                # Apply FFT
-                fft_result = np.fft.fft2(feature_map)
-                fft_shifted = np.fft.fftshift(fft_result)
-                magnitude_spectrum = 20*np.log(np.abs(fft_shifted) + 1)
-                
-                # Find peaks in frequency domain
-                from scipy.signal import find_peaks
-                # Flatten the 2D spectrum to find peaks
-                flat_spectrum = magnitude_spectrum.flatten()
-                peaks, _ = find_peaks(flat_spectrum, height=np.mean(flat_spectrum) + 2*np.std(flat_spectrum))
-                
-                # Store metrics about the peaks
-                peak_metrics = {
-                    'num_peaks': len(peaks),
-                    'peak_strength': np.mean([flat_spectrum[p] for p in peaks]) if len(peaks) > 0 else 0,
-                    'periodicity_score': len(peaks) * np.mean([flat_spectrum[p] for p in peaks]) if len(peaks) > 0 else 0
-                }
-                
-                layer_results.append(peak_metrics)
-                
-                # Visualize
-                plt.subplot(5, 3, i*3+1)
-                plt.imshow(feature_map, cmap='viridis')
-                plt.title(f"Filter {i+1}")
-                plt.axis('off')
-                
-                plt.subplot(5, 3, i*3+2)
-                plt.imshow(magnitude_spectrum, cmap='viridis')
-                plt.title(f"Frequency Spectrum")
-                plt.axis('off')
-                
-                # Plot original image with high-frequency areas highlighted
-                plt.subplot(5, 3, i*3+3)
-                plt.imshow(original_img)
-                
-                # Highlight periodic regions
-                # We need to transform peak locations back to spatial coordinates
-                # This is a complex topic, simplified here
-                plt.title(f"Periodicities: {peak_metrics['num_peaks']}")
-                plt.axis('off')
-            
-            # Save figure
-            plt.tight_layout()
-            plt.savefig(os.path.join(output_dir, f"periodicity_layer_{layer_idx}.png"))
-            plt.close()
-            
-            # Average results across feature maps
-            avg_results = {
-                'avg_num_peaks': np.mean([r['num_peaks'] for r in layer_results]),
-                'avg_peak_strength': np.mean([r['peak_strength'] for r in layer_results]),
-                'avg_periodicity_score': np.mean([r['periodicity_score'] for r in layer_results])
-            }
-            
-            results[f"layer_{layer_idx}"] = avg_results
-            
-        return results
-    
     def visualize_periodicity_map(self, image_path, layer_idx=0, output_dir="py-src/AlexNet_1k_Classes/periodicity_maps"):
         """
         Create a visualization that highlights periodic patterns in the original image.
@@ -452,142 +355,34 @@ class PeriodicityAnalyzer:
         plt.axis('off')
         
         # Save the figure
-        output_path = os.path.join(output_dir, f"{os.path.basename(image_path).split('.')[0]}_periodicity_map.png")
+        output_path = os.path.join(output_dir, f"{os.path.basename(image_path).split('.')[0]}-perio_maps.png")
         plt.tight_layout()
         plt.savefig(output_path)
         plt.close()
         
-        print(f"Periodicity map saved to {output_path}")
         return output_path
-
-    def extract_dominant_periodicities(self, image_path, layer_idx=0):
-        """
-        Extract information about dominant periodic patterns in an image.
-        
-        Args:
-            image_path (str): Path to the image
-            layer_idx (int): Layer index to use for analysis
-            
-        Returns:
-            dict: Information about dominant periodicities
-        """
-        # Load and process the image
-        img_tensor = self.classifier.load_image(image_path)
-        
-        # Extract features
-        feature_extractor = torch.nn.Sequential(*list(self.classifier.model.features[:layer_idx+1]))
-        with torch.no_grad():
-            features = feature_extractor(img_tensor)
-        feature_maps = features.squeeze(0).cpu().numpy()
-        
-        # Collect periodicity information
-        periodicities = []
-        
-        # For each feature map
-        for i in range(feature_maps.shape[0]):
-            feature_map = feature_maps[i]
-            
-            # Apply FFT
-            fft_result = np.fft.fft2(feature_map)
-            fft_shifted = np.fft.fftshift(fft_result)
-            magnitude_spectrum = np.log(np.abs(fft_shifted) + 1)
-            
-            # Find peaks in frequency domain
-            from scipy.signal import find_peaks_cwt
-            from skimage.feature import peak_local_max
-            
-            # Find local maxima in 2D spectrum
-            coords = peak_local_max(magnitude_spectrum, 
-                                   min_distance=3, 
-                                   threshold_abs=np.mean(magnitude_spectrum) + 2*np.std(magnitude_spectrum),
-                                   exclude_border=False,
-                                   num_peaks=5)
-            
-            # Convert peak positions to frequency information
-            center_y, center_x = magnitude_spectrum.shape[0] // 2, magnitude_spectrum.shape[1] // 2
-            for y, x in coords:
-                # Skip the DC component (zero frequency) at the center
-                if abs(y - center_y) < 3 and abs(x - center_x) < 3:
-                    continue
-                    
-                # Calculate distance from center (frequency magnitude)
-                dx = x - center_x
-                dy = y - center_y
-                distance = np.sqrt(dx**2 + dy**2)
-                
-                # Calculate angle (direction of periodicity)
-                angle = np.degrees(np.arctan2(dy, dx)) % 180
-                
-                # Calculate period length in pixels
-                if distance > 0:
-                    period = max(feature_map.shape) / distance
-                else:
-                    period = float('inf')
-                
-                # Calculate strength of this periodicity
-                strength = magnitude_spectrum[y, x]
-                
-                periodicities.append({
-                    'filter_idx': i,
-                    'frequency': distance,
-                    'period': period,
-                    'angle': angle,
-                    'strength': strength,
-                    'peak_position': (y, x)
-                })
-        
-        # Sort by strength
-        periodicities.sort(key=lambda x: x['strength'], reverse=True)
-        
-        # Keep only top periodicities
-        top_periodicities = periodicities[:10]
-        
-        # Group by similar directions
-        direction_groups = {}
-        for p in top_periodicities:
-            angle_key = round(p['angle'] / 10) * 10  # Group by 10-degree bins
-            if angle_key not in direction_groups:
-                direction_groups[angle_key] = []
-            direction_groups[angle_key].append(p)
-        
-        # Calculate average for each direction
-        direction_summaries = []
-        for angle, group in direction_groups.items():
-            avg_period = np.mean([p['period'] for p in group])
-            total_strength = np.sum([p['strength'] for p in group])
-            direction_summaries.append({
-                'angle': angle,
-                'avg_period': avg_period,
-                'total_strength': total_strength,
-                'count': len(group)
-            })
-        
-        # Sort by strength
-        direction_summaries.sort(key=lambda x: x['total_strength'], reverse=True)
-        
-        return {
-            'top_periodicities': top_periodicities,
-            'direction_summaries': direction_summaries
-        }
 
 
 def main():
+    window = tk.Tk()
+    window.wm_attributes('-topmost', 1)
+    window.withdraw()  # Hide the root window
+
     print("\033[31mInitializing AlexNet model please wait.\033[0m")
     classifier = ImageClassifier()
     feature_extractor = AlexNetFeatureExtractor(classifier)
     periodicity_info = PeriodicityAnalyzer(classifier)
-    print("\033[32mAlexNet model initialized.\033[0m")  # Print in green color
+    print("\033[32mAlexNet model initialized.\033[0m")
 
-    print("\nOptions:")
+    print("\033[93m\nOptions:\033[0m")
     print("1: Single image classification - Base pretrained AlexNet")
     print("2: Folder classification - Base pretrained AlexNet")
-    print("3: Visualize first conv layer features")
+    print("3: Visualize first conv layer features map")
     print("4: Analyze image periodicity")
     
     mode = int(input("Enter your choice (1-4): "))
     if mode == 1:
         # Single image classification
-        tk.Tk().withdraw()  # Hide the main window
         image_path = filedialog.askopenfilename(title="Select image to analyze")
         if os.path.exists(image_path):
             results = classifier.predict(image_path)
@@ -597,7 +392,6 @@ def main():
 
     elif mode == 2:
         # Batch classification
-        tk.Tk().withdraw()  # Hide the main window
         image_dir = filedialog.askdirectory(title="Select folder to analyze")
         if os.path.isdir(image_dir):
             batch_results = classifier.batch_predict(image_dir)
@@ -609,23 +403,18 @@ def main():
 
     elif mode == 3:
         # Feature visualization
-        tk.Tk().withdraw()  # Hide the main window
         image_path = filedialog.askopenfilename(title="Select image to analyze")
         if os.path.exists(image_path):
             output_path = feature_extractor.visualize_layer_features(image_path, "py-src/AlexNet_1k_Classes/feature_maps")
-            print(f"Visualization complete! Check the output at: features_maps")
+            print(f"\033[32m\nVisualization complete! Check the output at {output_path}\033[0m (crtl + click to open)")
 
     elif mode == 4:
         # Analyze single image periodicity
-        tk.Tk().withdraw()  # Hide the main window
         image_path = filedialog.askopenfilename(title="Select image to analyze")
         if os.path.exists(image_path):
-            print("Creating periodicity map...")
-            map_path = periodicity_info.visualize_periodicity_map(image_path)
-            print("Extracting dominant periodicities...")
-            periodicity_info = periodicity_info.extract_dominant_periodicities(image_path)
-            
-            print(f"\nPeriodicity map saved to periodicity_maps")
+            print("\nCreating periodicity map...")
+            map_path = periodicity_info.visualize_periodicity_map(image_path)  
+            print(f"\033[32mPeriodicity map saved to {map_path}\033[0m (crtl + click to open)")
 
 if __name__ == "__main__":
     main()
