@@ -1,4 +1,5 @@
 import os
+import cv2
 import torch
 import numpy as np
 import tkinter as tk
@@ -270,7 +271,6 @@ class PeriodicityAnalyzer:
         # Load and process the image
         img_tensor = self.classifier.load_image(image_path)
         original_img = Image.open(image_path)
-        img_np = np.array(original_img)
         
         # Extract features for the specified layer
         feature_extractor = torch.nn.Sequential(*list(self.classifier.model.features[:layer_idx+1]))
@@ -305,7 +305,7 @@ class PeriodicityAnalyzer:
                     # Convert 1D peak index back to 2D coordinates
                     y, x = np.unravel_index(p, fft_shifted.shape)
                     # Copy a small region around the peak
-                    window_size = 3
+                    window_size = 1
                     y_min, y_max = max(0, y-window_size), min(fft_shifted.shape[0], y+window_size+1)
                     x_min, x_max = max(0, x-window_size), min(fft_shifted.shape[1], x+window_size+1)
                     filtered_spectrum[y_min:y_max, x_min:x_max] = fft_shifted[y_min:y_max, x_min:x_max]
@@ -327,34 +327,69 @@ class PeriodicityAnalyzer:
         if peak_strength_map.max() > 0:
             periodicity_map = periodicity_map / peak_strength_map.max()
         
-        # Resize to match original image
-        from scipy.ndimage import zoom
-        zoom_factors = (img_np.shape[0] / periodicity_map.shape[0], 
-                    img_np.shape[1] / periodicity_map.shape[1])
-        resized_map = zoom(periodicity_map, zoom_factors, order=1)
+        # Resize the periodicity map to match the original image
+        resized_map = cv2.resize(periodicity_map, (original_img.width, original_img.height))
+
+        # Create a copy of the resized map
+        filtered_resized_map = resized_map.copy()
+        # Calculate threshold as the value at 10% of highest values
+        flat_values = np.sort(filtered_resized_map.flatten())[::-1]
+        threshold = flat_values[int(0. * len(flat_values))]
+        # Apply threshold to the original shaped array
+        filtered_resized_map[filtered_resized_map < threshold] = 0
+        
+        # Convert filtered map to binary image for contour detection
+        binary_map = (resized_map > 0).astype(np.uint8) * 255
+        
+        # Find contours of periodic patterns
+        contours, _ = cv2.findContours(binary_map, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # Create a copy of the original image for drawing boxes
+        img_np = np.array(original_img)
+        img_with_boxes = img_np.copy()
+        
+        # Draw rectangles around periodic patterns
+        for contour in contours:
+            # Filter out very small contours
+            if cv2.contourArea(contour) > 100:  # Adjust threshold as needed
+                x, y, w, h = cv2.boundingRect(contour)
+                cv2.rectangle(img_with_boxes, (x, y), (x+w, y+h), (0, 255, 0), 2)
         
         # Create visualization
-        plt.figure(figsize=(15, 10))
+        plt.figure(figsize=(18, 10))
         
         # Original image
-        plt.subplot(1, 3, 1)
+        plt.subplot(1, 5, 1)
         plt.imshow(original_img)
         plt.title("Original Image")
         plt.axis('off')
         
         # Periodicity heatmap
-        plt.subplot(1, 3, 2)
+        plt.subplot(1, 5, 2)
         plt.imshow(resized_map, cmap='hot')
         plt.title("Periodicity Map")
         plt.axis('off')
         
         # Overlay
-        plt.subplot(1, 3, 3)
+        plt.subplot(1, 5, 3)
         plt.imshow(original_img)
-        plt.imshow(resized_map, cmap='hot', alpha=0.6)
+        plt.imshow(resized_map, cmap='hot', alpha=0.5)
         plt.title("Overlay")
         plt.axis('off')
         
+        # Best activation
+        plt.subplot(1, 5, 4)
+        plt.imshow(original_img)
+        plt.imshow(filtered_resized_map, cmap='hot', alpha=0.5)
+        plt.title("Best Activation")
+        plt.axis('off')
+        
+        # Image with bounding boxes
+        plt.subplot(1, 5, 5)
+        plt.imshow(img_with_boxes)
+        plt.title("Periodic Patterns Detected")
+        plt.axis('off')
+
         # Save the figure
         output_path = os.path.join(output_dir, f"{os.path.basename(image_path).split('.')[0]}-perio_maps.png")
         plt.tight_layout()
