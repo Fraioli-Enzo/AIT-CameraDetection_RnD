@@ -207,6 +207,7 @@ class AlexNetFeatureExtractor:
         
         return output_paths
 
+    ## Not use, keep just in case ##
     def combine_image(self, image_path1, image_path2, output_dir="py-src/AlexNet_1k_Classes/combine_feature_maps"):
         Image1 = Image.open(image_path1)
         Image2 = Image.open(image_path2)
@@ -375,40 +376,45 @@ def main():
     print("\033[32mAlexNet model initialized.\033[0m")
 
     print("\033[93m\nOptions:\033[0m")
-    print("1: Single image classification - Base pretrained AlexNet")
-    print("2: Folder classification - Base pretrained AlexNet")
-    print("3: Visualize first conv layer features map")
-    print("4: Analyze image periodicity")
+    print("1: Image classification (1000 classes) - Base pretrained AlexNet")
+    print("2: Visualize first conv layer features map")
+    print("3: Analyze image periodicity")
     
-    mode = int(input("Enter your choice (1-4): "))
+    mode = int(input("Enter your choice (1-3): "))
     if mode == 1:
-        # Single image classification
-        image_path = filedialog.askopenfilename(title="Select image to analyze")
-        if os.path.exists(image_path):
-            results = classifier.predict(image_path)
-            print(f"Results for {image_path}:")
-            for class_name, probability in results:
-                print(f"{class_name}: {probability:.4f}")
+        print("\033[93m\nOptions:\033[0m")
+        print("1: Single image classification - Base pretrained AlexNet")
+        print("2: Folder classification - Base pretrained AlexNet")
 
-    elif mode == 2:
-        # Batch classification
-        image_dir = filedialog.askdirectory(title="Select folder to analyze")
-        if os.path.isdir(image_dir):
-            batch_results = classifier.batch_predict(image_dir)
-            print(f"\nBatch results for directory {image_dir}:")
-            for filename, predictions in batch_results.items():
-                print(f"\n{filename}:")
-                for class_name, probability in predictions:
+        option = int(input("Enter your choice 1 or 2: "))
+        if option == 1:
+            # Single image classification
+            image_path = filedialog.askopenfilename(title="Select image to analyze")
+            if os.path.exists(image_path):
+                results = classifier.predict(image_path)
+                print(f"\nResults for {image_path}:")
+                for class_name, probability in results:
                     print(f"{class_name}: {probability:.4f}")
 
-    elif mode == 3:
+        elif option == 2:
+            # Batch classification
+            image_dir = filedialog.askdirectory(title="Select folder to analyze")
+            if os.path.isdir(image_dir):
+                batch_results = classifier.batch_predict(image_dir)
+                print(f"\nBatch results for directory {image_dir}:")
+                for filename, predictions in batch_results.items():
+                    print(f"\n{filename}:")
+                    for class_name, probability in predictions:
+                        print(f"{class_name}: {probability:.4f}")
+
+    elif mode == 2:
         # Feature visualization
         image_path = filedialog.askopenfilename(title="Select image to analyze")
         if os.path.exists(image_path):
             output_path = feature_extractor.visualize_layer_features(image_path, "py-src/AlexNet_1k_Classes/feature_maps")
             print(f"\033[32m\nVisualization complete! Check the output at {output_path}\033[0m (crtl + click to open)")
 
-    elif mode == 4:
+    elif mode == 3:
         # Analyze single image periodicity
         image_path = filedialog.askopenfilename(title="Select image to analyze")
         if os.path.exists(image_path):
