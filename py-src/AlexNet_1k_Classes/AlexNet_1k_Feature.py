@@ -349,70 +349,6 @@ class PeriodicityAnalyzer:
             
         return results
     
-    def calculate_periodicity_similarity(self, image_paths, layer_indices=[0, 3]):
-        """
-        Calculate similarity between images based on their periodicity features.
-        
-        Args:
-            image_paths (list): List of paths to images to compare
-            layer_indices (list): CNN layers to use for analysis
-            
-        Returns:
-            dict: Similarity matrix and periodicity features for each image
-        """
-        print("Analyzing periodicity patterns across images...")
-        
-        # Store features for each image
-        all_features = {}
-        
-        # Process each image
-        for i, img_path in enumerate(image_paths):
-            print(f"Processing image {i+1}/{len(image_paths)}: {os.path.basename(img_path)}")
-            
-            # Extract periodicity metrics
-            metrics = self.analyze_periodicity(img_path, layer_indices, 
-                                            output_dir=f"py-src/AlexNet_1k_Classes/periodicity_analysis/{os.path.basename(img_path).split('.')[0]}")
-            
-            # Flatten metrics into a feature vector
-            feature_vector = []
-            for layer_idx in layer_indices:
-                layer_key = f"layer_{layer_idx}"
-                if layer_key in metrics:
-                    feature_vector.extend([
-                        metrics[layer_key]['avg_num_peaks'],
-                        metrics[layer_key]['avg_peak_strength'],
-                        metrics[layer_key]['avg_periodicity_score']
-                    ])
-            
-            all_features[img_path] = {
-                'features': feature_vector,
-                'metrics': metrics
-            }
-        
-        # Calculate similarity matrix
-        similarity_matrix = {}
-        for img1 in image_paths:
-            similarity_matrix[img1] = {}
-            for img2 in image_paths:
-                if img1 == img2:
-                    similarity_matrix[img1][img2] = 1.0  # Self-similarity is 1.0
-                else:
-                    # Calculate cosine similarity between feature vectors
-                    v1 = np.array(all_features[img1]['features'])
-                    v2 = np.array(all_features[img2]['features'])
-                    
-                    if np.sum(v1) == 0 or np.sum(v2) == 0:
-                        similarity = 0.0
-                    else:
-                        similarity = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
-                    
-                    similarity_matrix[img1][img2] = similarity
-        
-        return {
-            'similarity_matrix': similarity_matrix,
-            'features': all_features
-        }
-
     def visualize_periodicity_map(self, image_path, layer_idx=0, output_dir="py-src/AlexNet_1k_Classes/periodicity_maps"):
         """
         Create a visualization that highlights periodic patterns in the original image.
@@ -636,8 +572,6 @@ class PeriodicityAnalyzer:
 
 
 def main():
-    tk.Tk().withdraw()  # Hide the main window
-
     print("\033[31mInitializing AlexNet model please wait.\033[0m")
     classifier = ImageClassifier()
     feature_extractor = AlexNetFeatureExtractor(classifier)
@@ -645,16 +579,16 @@ def main():
     print("\033[32mAlexNet model initialized.\033[0m")  # Print in green color
 
     print("\nOptions:")
-    print("1: Single image classification")
-    print("2: Folder classification")
+    print("1: Single image classification - Base pretrained AlexNet")
+    print("2: Folder classification - Base pretrained AlexNet")
     print("3: Visualize first conv layer features")
     print("4: Analyze image periodicity")
-    print("5: Compare periodicity between two images")
     
-    mode = int(input("Enter your choice (1-6): "))
+    mode = int(input("Enter your choice (1-4): "))
     if mode == 1:
         # Single image classification
-        image_path = filedialog.askopenfilename()
+        tk.Tk().withdraw()  # Hide the main window
+        image_path = filedialog.askopenfilename(title="Select image to analyze")
         if os.path.exists(image_path):
             results = classifier.predict(image_path)
             print(f"Results for {image_path}:")
@@ -663,7 +597,8 @@ def main():
 
     elif mode == 2:
         # Batch classification
-        image_dir = filedialog.askdirectory()
+        tk.Tk().withdraw()  # Hide the main window
+        image_dir = filedialog.askdirectory(title="Select folder to analyze")
         if os.path.isdir(image_dir):
             batch_results = classifier.batch_predict(image_dir)
             print(f"\nBatch results for directory {image_dir}:")
@@ -674,13 +609,15 @@ def main():
 
     elif mode == 3:
         # Feature visualization
-        image_path = filedialog.askopenfilename()
+        tk.Tk().withdraw()  # Hide the main window
+        image_path = filedialog.askopenfilename(title="Select image to analyze")
         if os.path.exists(image_path):
             output_path = feature_extractor.visualize_layer_features(image_path, "py-src/AlexNet_1k_Classes/feature_maps")
             print(f"Visualization complete! Check the output at: features_maps")
 
     elif mode == 4:
         # Analyze single image periodicity
+        tk.Tk().withdraw()  # Hide the main window
         image_path = filedialog.askopenfilename(title="Select image to analyze")
         if os.path.exists(image_path):
             print("Creating periodicity map...")
@@ -688,32 +625,7 @@ def main():
             print("Extracting dominant periodicities...")
             periodicity_info = periodicity_info.extract_dominant_periodicities(image_path)
             
-            print("\nDominant Periodicity Patterns:")
-            for i, dir_info in enumerate(periodicity_info['direction_summaries'][:3]):
-                print(f"  {i+1}. Direction: {dir_info['angle']}° - " + 
-                     f"Period: {dir_info['avg_period']:.1f} pixels, " + 
-                     f"Strength: {dir_info['total_strength']:.1f}")
-            
-            print(f"\nPeriodicity map saved to {map_path}")
-            
-    elif mode == 5:
-        # Compare two images
-        print("Select first image:")
-        img1 = filedialog.askopenfilename(title="Select first image")
-        print("Select second image:")
-        img2 = filedialog.askopenfilename(title="Select second image")
-        
-        if os.path.exists(img1) and os.path.exists(img2):
-            # Calculate similarity
-            sim_results = periodicity_info.calculate_periodicity_similarity([img1, img2])
-            similarity = sim_results['similarity_matrix'][img1][img2]
-            
-            print(f"\nPeriodicity pattern similarity: {similarity:.4f}")
-            print(f"(0 = completely different, 1 = identical patterns)")
-            
-            # Visualize both
-            periodicity_info.visualize_periodicity_map(img1)
-            periodicity_info.visualize_periodicity_map(img2)
+            print(f"\nPeriodicity map saved to periodicity_maps")
 
 if __name__ == "__main__":
     main()
