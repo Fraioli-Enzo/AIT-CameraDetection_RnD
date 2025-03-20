@@ -10,7 +10,9 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torchvision.models import AlexNet_Weights
 
-# Option 1 & 2
+## Have to analyses picture multiple by 55 x 55 pixels ##
+
+# Option 1
 class ImageClassifier:
     def __init__(self, model_name='alexnet'):
         """
@@ -120,7 +122,7 @@ class ImageClassifier:
                 
         return results
     
-# Option 3
+# Option 2
 class AlexNetFeatureExtractor:
     def __init__(self, classifier):
         """
@@ -243,7 +245,7 @@ class AlexNetFeatureExtractor:
         supperposition.save(output_path)
         print(f"Combined image saved to {output_path}")
 
-# Option 4
+# Option 3
 class PeriodicityAnalyzer:
     def __init__(self, classifier):
         """
@@ -329,16 +331,11 @@ class PeriodicityAnalyzer:
         # Resize the periodicity map to match the original image
         resized_map = cv2.resize(periodicity_map, (original_img.width, original_img.height))
 
-        # Create a copy of the resized map
-        filtered_resized_map = resized_map.copy()
-        # Calculate threshold as the value at 10% of highest values
-        flat_values = np.sort(filtered_resized_map.flatten())[::-1]
-        threshold = flat_values[int(0.2 * len(flat_values))]
-        # Apply threshold to the original shaped array
-        filtered_resized_map[filtered_resized_map < threshold] = 0
+        # Filter the map to highlight the most periodic regions
+        filtered_resized_map = self._filter_map(resized_map, 0.1)
         
         # Convert filtered map to binary image for contour detection
-        binary_map = (resized_map > 0).astype(np.uint8) * 255
+        binary_map = (filtered_resized_map > 0).astype(np.uint8) * 255
         
         # Find contours of periodic patterns
         contours, _ = cv2.findContours(binary_map, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -410,13 +407,45 @@ class PeriodicityAnalyzer:
         plt.axis('off')
 
         # Save the figure
-        output_path = os.path.join(output_dir, f"{image_path.split('.')[0]}-perio_maps.png")
+        image_name = image_path.split('/')[-1]
+        output_path = os.path.join(output_dir, f"{image_name.split('.')[0]}-perio_maps.png")
         plt.tight_layout()
         plt.savefig(output_path)
         plt.close()
         
         return output_path
 
+    def _filter_map(self, periodicity_map, threshold_percentile):
+        """
+        Filter the periodicity map to highlight the most periodic regions.
+        
+        Args:
+            periodicity_map (np.ndarray): Periodicity map
+            threshold_percentile (int): Percentile value for thresholding
+        
+        Returns:
+            np.ndarray: Filtered periodicity map
+        """
+        # Create a copy of the resized map
+        filtered_resized_map = periodicity_map.copy()
+        # Create a mask for border pixels (3 pixels from each edge)
+        h, w = filtered_resized_map.shape
+        border_mask = np.ones((h, w), dtype=bool)
+        border_mask[:5, :] = False  # Top border
+        border_mask[-5:, :] = False  # Bottom border
+        border_mask[:, :5] = False  # Left border
+        border_mask[:, -5:] = False  # Right border
+
+        # Apply the border mask to zero out edge pixels
+        filtered_resized_map = filtered_resized_map * border_mask
+        # Calculate threshold as the value at 10% of highest values
+        flat_values = np.sort(filtered_resized_map.flatten())[::-1]
+        threshold = flat_values[int(threshold_percentile * len(flat_values))]
+        # Apply threshold to the original shaped array
+        filtered_resized_map[filtered_resized_map < threshold] = 0
+        
+        return filtered_resized_map
+    
 def main():
     window = tk.Tk()
     window.wm_attributes('-topmost', 1)
