@@ -254,7 +254,7 @@ class PeriodicityAnalyzer:
         """
         self.classifier = classifier
 
-    def visualize_periodicity_map(self, image_path, layer_idx=0, output_dir="py-src/AlexNet_1k_Classes/periodicity_maps"):
+    def periodicity_map(self, image_path, layer_idx=0, output_dir="py-src/AlexNet_1k_Classes/periodicity_maps"):
         """
         Create a visualization that highlights periodic patterns in the original image.
         
@@ -266,8 +266,7 @@ class PeriodicityAnalyzer:
         Returns:
             str: Path to the saved visualization
         """
-        os.makedirs(output_dir, exist_ok=True)
-        
+
         # Load and process the image
         img_tensor = self.classifier.load_image(image_path)
         original_img = Image.open(image_path)
@@ -334,7 +333,7 @@ class PeriodicityAnalyzer:
         filtered_resized_map = resized_map.copy()
         # Calculate threshold as the value at 10% of highest values
         flat_values = np.sort(filtered_resized_map.flatten())[::-1]
-        threshold = flat_values[int(0. * len(flat_values))]
+        threshold = flat_values[int(0.2 * len(flat_values))]
         # Apply threshold to the original shaped array
         filtered_resized_map[filtered_resized_map < threshold] = 0
         
@@ -354,6 +353,26 @@ class PeriodicityAnalyzer:
             if cv2.contourArea(contour) > 100:  # Adjust threshold as needed
                 x, y, w, h = cv2.boundingRect(contour)
                 cv2.rectangle(img_with_boxes, (x, y), (x+w, y+h), (0, 255, 0), 2)
+        
+        # Save the periodicity map
+        output_path = self._visualize_periodicity_map(original_img, resized_map, filtered_resized_map, img_with_boxes, image_path, output_dir)
+        
+        return output_path
+
+    def _visualize_periodicity_map(self, original_img, resized_map, filtered_resized_map, img_with_boxes, image_path, output_dir="py-src/AlexNet_1k_Classes/periodicity_maps"):
+        """
+        Create a visualization that highlights periodic patterns in the original image.
+        
+        Args:
+            original_img (PIL.Image): Original image
+            filtered_resized_map (np.ndarray): Resized periodicity map
+            img_with_boxes (np.ndarray): Image with bounding boxes
+            output_dir (str): Directory to save the visualization
+            
+        Returns:
+            str: Path to the saved visualization
+        """
+        os.makedirs(output_dir, exist_ok=True)
         
         # Create visualization
         plt.figure(figsize=(18, 10))
@@ -391,13 +410,12 @@ class PeriodicityAnalyzer:
         plt.axis('off')
 
         # Save the figure
-        output_path = os.path.join(output_dir, f"{os.path.basename(image_path).split('.')[0]}-perio_maps.png")
+        output_path = os.path.join(output_dir, f"{image_path.split('.')[0]}-perio_maps.png")
         plt.tight_layout()
         plt.savefig(output_path)
         plt.close()
         
         return output_path
-
 
 def main():
     window = tk.Tk()
@@ -454,7 +472,7 @@ def main():
         image_path = filedialog.askopenfilename(title="Select image to analyze")
         if os.path.exists(image_path):
             print("\nCreating periodicity map...")
-            map_path = periodicity_info.visualize_periodicity_map(image_path)  
+            map_path = periodicity_info.periodicity_map(image_path)  
             print(f"\033[32mPeriodicity map saved to {map_path}\033[0m (crtl + click to open)")
 
 if __name__ == "__main__":
