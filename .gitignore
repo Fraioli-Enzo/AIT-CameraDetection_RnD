@@ -4,6 +4,7 @@ venv
 dataset
 Images
 Research
+FabricSpotDefect
 py-src/AlexNet_1k_Classes/feature_maps
 py-src/AlexNet_1k_Classes/combine_feature_maps
 py-src/AlexNet_1k_Classes/periodicity_analysis
