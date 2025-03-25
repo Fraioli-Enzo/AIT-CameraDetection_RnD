@@ -31,7 +31,6 @@ def run_inference(image_path):
 def export_model():
     model = YOLO("YOLO_V2/train/weights/best.pt")
     model.export(format="onnx")  # Export to ONNX
-    model.export(format="engine")  # Export to TensorRT
 
 if __name__ == "__main__":
     if torch.cuda.is_available():
@@ -39,24 +38,17 @@ if __name__ == "__main__":
     else:
         print("Training on CPU. Consider using GPU for better performance.")
     
-    # train_model()
-    # print("Training completed.")
+    train_model()
+    print("Training completed.")
     
-    # # Vérifiez si le fichier de modèle existe avant de continuer
-    # if os.path.exists("YOLO_V2/train/weights/best.pt"):
-    #     evaluate_model()
-    #     print("Evaluation completed.")
+    # Vérifiez si le fichier de modèle existe avant de continuer
+    if os.path.exists("YOLO_V2/train/weights/best.pt"):
+        evaluate_model()
+        print("Evaluation completed.")
         
-    #     export_model()
-    #     print("Model exported.")
-    # else:
-    #     print("ERROR: Le fichier de modèle entraîné n'a pas été trouvé.")
-    #     print("Chemin attendu: YOLO_V2/train/weights/best.pt")
-    #     print("Vérifiez le dossier de sortie de l'entraînement et ajustez les chemins.")
-
-    test_image = "Images/Test_Test.jpg"  # Replace with an actual test image
-    if os.path.exists(test_image):
-        run_inference(test_image)
-        print("Inference completed.")
+        export_model()
+        print("Model exported.")
     else:
-        print(f"Test image {test_image} not found.")
+        print("ERROR: Le fichier de modèle entraîné n'a pas été trouvé.")
+        print("Chemin attendu: YOLO_V2/train/weights/best.pt")
+        print("Vérifiez le dossier de sortie de l'entraînement et ajustez les chemins.")
