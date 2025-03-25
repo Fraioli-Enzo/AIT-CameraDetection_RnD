@@ -1,19 +1,22 @@
 from ultralytics import YOLO
 import torch
+import os
 
 def train_model():
     model = YOLO("yolov8n.pt")  # Load YOLOv8 model
-    model.train(data="D:\Enzo\datasets\FabricSpotDefect\Orginal\YOLOv8\data.yaml", epochs=1, batch=16, imgsz=640)
+    model.train(data="D:\Enzo\datasets\FabricDefects2\data.yaml", epochs=25, batch=16, imgsz=416, project="YOLO_V2")
 
 def evaluate_model():
-    model = YOLO("YOLO_V2/runs/detect/train/weights/best.pt")
-    metrics = model.val()
+    # Le chemin correct vers le modèle entraîné
+    model = YOLO("YOLO_V2/train/weights/best.pt")
+    metrics = model.val(project="YOLO_V2")
     print(metrics)
 
 def run_inference(image_path):
-    model = YOLO("YOLO_V2/runs/detect/train/weights/best.pt")
+    # Le même chemin correct vers le modèle
+    model = YOLO("YOLO_V2/train/weights/best.pt")
     # La méthode predict est plus simple à utiliser
-    results = model.predict(source=image_path, save=True, save_txt=True, project="YOLO_V2")
+    results = model.predict(source=image_path, save=True, save_txt=True, project="YOLO_V2/predicts")
     
     # Pour afficher les résultats
     import cv2
@@ -23,25 +26,37 @@ def run_inference(image_path):
         cv2.waitKey(0)
     
     cv2.destroyAllWindows()
-    print(f"Results saved to output folder")
+    print(f"Results saved to YOLO_V2 folder")
 
 def export_model():
-    model = YOLO("YOLO_V2/runs/detect/train/weights/best.pt")
+    model = YOLO("YOLO_V2/train/weights/best.pt")
     model.export(format="onnx")  # Export to ONNX
     model.export(format="engine")  # Export to TensorRT
 
 if __name__ == "__main__":
- 
     if torch.cuda.is_available():
         print("CUDA is available. Training on GPU.")
     else:
         print("Training on CPU. Consider using GPU for better performance.")
     
-    train_model()
-    print("Training completed.")
+    # train_model()
+    # print("Training completed.")
     
-    evaluate_model()
-    print("Evaluation completed.")
-    
-    export_model()
-    print("Model exported.")
+    # # Vérifiez si le fichier de modèle existe avant de continuer
+    # if os.path.exists("YOLO_V2/train/weights/best.pt"):
+    #     evaluate_model()
+    #     print("Evaluation completed.")
+        
+    #     export_model()
+    #     print("Model exported.")
+    # else:
+    #     print("ERROR: Le fichier de modèle entraîné n'a pas été trouvé.")
+    #     print("Chemin attendu: YOLO_V2/train/weights/best.pt")
+    #     print("Vérifiez le dossier de sortie de l'entraînement et ajustez les chemins.")
+
+    test_image = "Images/Test_Test.jpg"  # Replace with an actual test image
+    if os.path.exists(test_image):
+        run_inference(test_image)
+        print("Inference completed.")
+    else:
+        print(f"Test image {test_image} not found.")
