@@ -1,4 +1,6 @@
 from ultralytics import YOLO
+import tkinter as tk
+from tkinter import filedialog
 import cv2
 import os
 
@@ -25,7 +27,13 @@ def run_inference(image_path):
 
 
 if __name__ == "__main__":
-    test_image = "Images/anomali_15.png"  # Replace with an actual test image
+
+    window = tk.Tk()
+    window.wm_attributes('-topmost', 1)
+    window.withdraw()
+
+    test_image = filedialog.askopenfilename()
+
     if os.path.exists(test_image):
         run_inference(test_image)
         print("Inference completed.")
