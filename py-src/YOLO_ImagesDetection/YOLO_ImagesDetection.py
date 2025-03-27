@@ -4,12 +4,12 @@ from tkinter import filedialog
 import cv2
 import os
 
-def run_inference(image_path):
+def run_inference(image_path, model_version_epoch="25"):
     # Obtenir le dossier du script
     base_path = os.path.dirname(os.path.abspath(__file__))
 
     # Construire le chemin vers le modèle
-    model_path = os.path.join(base_path, "best.torchscript")
+    model_path = os.path.join(base_path, f"best{model_version_epoch}.torchscript")
     results_path = os.path.join(base_path, "predicts")
     # Le même chemin correct vers le modèle
     model = YOLO(model_path, task='detect')
@@ -27,7 +27,8 @@ def run_inference(image_path):
 
 
 if __name__ == "__main__":
-
+    model_version_epoch = input("Enter the model version epoch (default is 25): ")
+    
     window = tk.Tk()
     window.wm_attributes('-topmost', 1)
     window.withdraw()
@@ -35,7 +36,7 @@ if __name__ == "__main__":
     test_image = filedialog.askopenfilename()
 
     if os.path.exists(test_image):
-        run_inference(test_image)
+        run_inference(test_image, model_version_epoch)
         print("Inference completed.")
     else:
         print(f"Test image {test_image} not found.")
