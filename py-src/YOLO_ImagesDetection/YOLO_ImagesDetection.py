@@ -1,14 +1,19 @@
 from ultralytics import YOLO
-import torch
 import cv2
 import os
 
 def run_inference(image_path):
-    # Le même chemin correct vers le modèle
-    model = YOLO("YOLO_V2/train3/weights/best.torchscript", task='detect')
-    # La méthode predict est plus simple à utiliser
+    # Obtenir le dossier du script
+    base_path = os.path.dirname(os.path.abspath(__file__))
 
-    results = model.predict(source=image_path, save=True, save_txt=True, project="YOLO_V2/predicts", imgsz=640)
+    # Construire le chemin vers le modèle
+    model_path = os.path.join(base_path, "best.torchscript")
+    results_path = os.path.join(base_path, "predicts")
+    # Le même chemin correct vers le modèle
+    model = YOLO(model_path, task='detect')
+    
+    # La méthode predict est plus simple à utiliser
+    results = model.predict(source=image_path, save=True, save_txt=True, project=results_path, imgsz=640)
 
     # Pour afficher les résultats
     for r in results:
