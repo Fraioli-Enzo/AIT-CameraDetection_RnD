@@ -1,43 +1,49 @@
 from ultralytics import YOLO
-import tkinter as tk
-from tkinter import filedialog
 import cv2
 import os
 
-def run_inference(image_path, model_version_epoch="25"):
-    # Obtenir le dossier du script
+def run_inference_camera(model_version_epoch="25"):
+    # Get the script's directory
     base_path = os.path.dirname(os.path.abspath(__file__))
 
-    # Construire le chemin vers le modèle
+    # Build the path to the model
     model_path = os.path.join(base_path, f"best{model_version_epoch}.torchscript")
     results_path = os.path.join(base_path, "predicts")
-    # Le même chemin correct vers le modèle
+
+    # Load the YOLO model
     model = YOLO(model_path, task='detect')
-    
-    # La méthode predict est plus simple à utiliser
-    results = model.predict(source=image_path, save=True, save_txt=True, project=results_path, imgsz=640)
 
-    # Pour afficher les résultats
-    for r in results:
-        img = r.plot()
-        cv2.imshow("TEST", img)
-        cv2.waitKey(0)
+    # Open the camera (0 is usually the default camera)
+    cap = cv2.VideoCapture(0)
 
-    print(f"Results saved to YOLO_V2 folder")
+    if not cap.isOpened():
+        print("Error: Could not open the camera.")
+        return
 
+    print("Press 'q' to quit.")
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("Error: Could not read frame from the camera.")
+            break
+
+        # Run inference on the current frame
+        results = model.predict(source=frame, save=False, imgsz=640)
+
+        # Display the results
+        for r in results:
+            img = r.plot()
+            cv2.imshow("Camera Inference", img)
+
+        # Break the loop if 'q' is pressed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    # Release the camera and close all OpenCV windows
+    cap.release()
+    cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     model_version_epoch = input("Enter the model version epoch (default is 25): ")
-    
-    window = tk.Tk()
-    window.wm_attributes('-topmost', 1)
-    window.withdraw()
-
-    test_image = filedialog.askopenfilename()
-
-    if os.path.exists(test_image):
-        run_inference(test_image, model_version_epoch)
-        print("Inference completed.")
-    else:
-        print(f"Test image {test_image} not found.")
-
+    run_inference_camera(model_version_epoch)
