@@ -2,6 +2,13 @@ from ultralytics import YOLO
 import cv2
 import os
 
+
+'''
+Cut100 -> overfit 
+Cut50 -> medium
+Cut75 -> overfit
+'''
+
 def run_inference_camera(model_version_epoch="25"):
     # Get the script's directory
     base_path = os.path.dirname(os.path.abspath(__file__))
@@ -27,9 +34,13 @@ def run_inference_camera(model_version_epoch="25"):
         if not ret:
             print("Error: Could not read frame from the camera.")
             break
-
+        
+        # Apply Gaussian blur to the frame
+        # You can adjust the kernel size (5,5) and sigma (0) for more or less blurring
+        blurred_frame = cv2.GaussianBlur(frame, (5, 5), 2)
+        frame = blurred_frame  # Replace the original frame with the blurred one
         # Run inference on the current frame
-        results = model.predict(source=frame, save=False, imgsz=640)
+        results = model.predict(source=blurred_frame, save=False, imgsz=640)
 
         # Display the results
         for r in results:
