@@ -7,16 +7,16 @@ Changes all paths to the correct ones before running the script.
 '''
 def train_model():
     model = YOLO("yolo11n.pt")  # Load YOLOv8 model
-    model.train(data="C:/Users/user/Documents/ENZO/TEST_TEST/datasets/FDDv2/data.yaml", epochs=50, batch=24, imgsz=640, project="YOLO_V2")
+    model.train(data="C:/Users/user/Documents/ENZO/TEST_TEST/datasets/FDDv2/data.yaml", epochs=100, batch=32, imgsz=640, project="YOLO_V2")
 
 def evaluate_model():
     # Le chemin correct vers le modèle entraîné
-    model = YOLO("YOLO_V2/train2/weights/best.pt")
+    model = YOLO("YOLO_V2/train5/weights/best.pt")
     metrics = model.val(project="YOLO_V2")
     print(metrics)
 
 def export_model():
-    model = YOLO("YOLO_V2/train2/weights/best.pt")
+    model = YOLO("YOLO_V2/train5/weights/best.pt")
     model.export(format="torchscript") 
 
 
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     print("Training completed.")
     
     # Vérifiez si le fichier de modèle existe avant de continuer
-    if os.path.exists("YOLO_V2/train2/weights/best.pt"):
+    if os.path.exists("YOLO_V2/train5/weights/best.pt"):
         evaluate_model()
         print("Evaluation completed.")
         
@@ -43,7 +43,7 @@ if __name__ == "__main__":
         print("Model exported.")
     else:
         print("ERROR: Le fichier de modèle entraîné n'a pas été trouvé.")
-        print("Chemin attendu: YOLO_V2/train2/weights/best.pt")
+        print("Chemin attendu: YOLO_V2/train5/weights/best.pt")
         print("Vérifiez le dossier de sortie de l'entraînement et ajustez les chemins.")
 
 
