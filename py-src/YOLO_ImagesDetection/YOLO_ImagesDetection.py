@@ -2,6 +2,7 @@ from ultralytics import YOLO
 import cv2
 import os
 import numpy as np
+import time  # Add time module for FPS limiting
 
 '''
 Cut100 -> overfit 
@@ -11,8 +12,8 @@ Cut75 -> overfit
 
 # Global variables for slider values
 brightness_value = 0
-contrast_value = 1
-saturation_value = 1
+contrast_value = 2
+saturation_value = 2
 blur_value = 5
 
 def create_control_panel():
@@ -94,8 +95,15 @@ def run_inference_camera(model_version_epoch="25"):
         return
 
     print("Press 'q' to quit.")
-
+    
+    # FPS limiting variables
+    target_fps = 24
+    frame_time = 1.0 / target_fps
+    
     while True:
+        # Track frame start time
+        frame_start = time.time()
+        
         ret, frame = cap.read()
         if not ret:
             print("Error: Could not read frame from the camera.")
@@ -115,6 +123,13 @@ def run_inference_camera(model_version_epoch="25"):
         # Also display the original frame with adjustments for comparison
         cv2.imshow("Adjusted Frame", adjusted_frame)
 
+        # Calculate elapsed time for this frame
+        elapsed = time.time() - frame_start
+        
+        # If we processed the frame too quickly, wait to maintain target FPS
+        if elapsed < frame_time:
+            time.sleep(frame_time - elapsed)
+            
         # Break the loop if 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
