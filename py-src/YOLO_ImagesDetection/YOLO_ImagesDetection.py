@@ -168,10 +168,27 @@ def run_inference_camera(model_version_epoch="Small25_v8"):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    print("Choose the model you want to use in this list:")
-    print("1. Small25_v8")
-    print("2. Small25_v11")
-    print("3. Small50_v8")
-    print("4. Small50_v11")
-    model_version_epoch = input("Enter the model index (default is 1): ")
+    # Create a dictionary mapping indices to model names
+    models = {
+        "1": "Small25_v8",
+        "2": "Small25_v11",
+        "3": "Small50_v8",
+        "4": "Small50_v11"
+    }
+    
+    print("Choose the model you want to use:")
+    for idx, model in models.items():
+        print(f"{idx}. {model}")
+    
+    # Get user input with default value
+    model_index = input("Enter the model index (default is 1): ").strip()
+    
+    # Use default if input is empty or invalid
+    if not model_index or model_index not in models:
+        model_index = "1"
+        print("Using default model: Small25_v8")
+    
+    # Set the model_version_epoch based on the selected index
+    model_version_epoch = models[model_index]
+    print(f"Selected model: {model_version_epoch}")
     run_inference_camera(model_version_epoch)
