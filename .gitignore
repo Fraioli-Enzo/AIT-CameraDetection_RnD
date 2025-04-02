@@ -10,3 +10,4 @@ py-src/AlexNet_1k_Classes/combine_feature_maps
 py-src/AlexNet_1k_Classes/periodicity_analysis
 py-src/AlexNet_1k_Classes/periodicity_maps
 py-src/YOLO_ImagesDetection/predicts
+py-src/YOLO_ImagesDetection/screenshots

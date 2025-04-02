@@ -73,8 +73,8 @@ def create_control_panel(version):
         
         # Ensure the folder exists
         os.makedirs(folder_path, exist_ok=True)
-        
-        file_path = os.path.join(folder_path, f"screenshot_.png")
+        count = len([name for name in os.listdir(folder_path) if name.startswith("screenshot")])
+        file_path = os.path.join(folder_path, f"screenshot_{count}.png")
         
         # Take a screenshot of the entire screen
         screenshot = pyautogui.screenshot()
