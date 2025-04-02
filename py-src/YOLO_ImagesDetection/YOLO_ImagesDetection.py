@@ -90,7 +90,6 @@ def run_inference_camera(model_version_epoch="25"):
 
     # Build the path to the model
     model_path = os.path.join(base_path, f"best{model_version_epoch}.torchscript")
-    results_path = os.path.join(base_path, "predicts")
 
     # Load the YOLO model
     model = YOLO(model_path, task='detect')
@@ -128,6 +127,25 @@ def run_inference_camera(model_version_epoch="25"):
 
         # Display the results
         for r in results:
+            # Extract detections and print coordinates
+            boxes = r.boxes
+            if len(boxes) > 0:
+                print("\n--- Detected Objects ---")
+                
+            for box in boxes:
+                # Get coordinates (x1, y1, x2, y2 format)
+                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                
+                # Get confidence score
+                confidence = box.conf[0].item()
+                
+                # Get class name
+                cls_id = int(box.cls[0].item())
+                cls_name = model.names[cls_id]
+                
+                # Print information
+                print(f"Class: {cls_name} | Confidence: {confidence:.2f} | Coordinates: TopLeft({int(x1)}, {int(y1)}) BottomRight({int(x2)}, {int(y2)})")
+            
             img = r.plot()
             cv2.imshow("Camera Inference", img)
         
