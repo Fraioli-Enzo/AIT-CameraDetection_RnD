@@ -2,12 +2,16 @@ from ultralytics import YOLO
 import cv2
 import os
 import numpy as np
-import time  # Add time module for FPS limiting
+import time 
+
+
 
 '''
 Cut100 -> overfit 
 Cut50 -> medium
 Cut75 -> overfit
+
+THIS IS A TEST
 '''
 
 # Global variables for slider values
