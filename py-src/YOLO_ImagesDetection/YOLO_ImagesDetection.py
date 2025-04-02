@@ -3,7 +3,7 @@ import cv2
 import os
 import numpy as np
 import time 
-
+import tkinter as tk
 
 
 '''
@@ -16,23 +16,49 @@ THIS IS A TEST
 
 # Global variables for slider values
 brightness_value = 0
-contrast_value = 2
-saturation_value = 2
+contrast_value = 1
+saturation_value = 1
 blur_value = 5
 threshold_value = 0.2
 
 def create_control_panel(version):
-    # Create a window for the sliders
-    cv2.namedWindow(version)
-    # Make the window stay on top
-    cv2.setWindowProperty(version, cv2.WND_PROP_TOPMOST, 1)
+    # Create tkinter window
+    root = tk.Tk()
+    root.title(f"Camera Controls - {version}")
+    root.attributes('-topmost', True)  # Make window stay on top
     
-    # Create sliders
-    cv2.createTrackbar('Brightness', version, 0, 100, on_brightness_change)
-    cv2.createTrackbar('Contrast', version, 10, 30, on_contrast_change)
-    cv2.createTrackbar('Saturation', version, 10, 30, on_saturation_change)
-    cv2.createTrackbar('Blur', version, 5, 25, on_blur_change)
-    cv2.createTrackbar('Threshold', version, int(threshold_value * 100), 100, on_threshold_change) 
+    # Set the initial slider values
+    brightness_slider = tk.Scale(root, from_=0, to=100, orient=tk.HORIZONTAL, 
+                                label="Brightness", length=300,
+                                command=on_brightness_change)
+    brightness_slider.set(1) 
+    brightness_slider.pack(pady=5)
+    
+    contrast_slider = tk.Scale(root, from_=0, to=30, orient=tk.HORIZONTAL, 
+                              label="Contrast", length=300,
+                              command=on_contrast_change)
+    contrast_slider.set(int(contrast_value * 10))  # Convert from 2.0 to 20
+    contrast_slider.pack(pady=5)
+    
+    saturation_slider = tk.Scale(root, from_=0, to=30, orient=tk.HORIZONTAL, 
+                                label="Saturation", length=300,
+                                command=on_saturation_change)
+    saturation_slider.set(int(saturation_value * 10))  # Convert from 2.0 to 20
+    saturation_slider.pack(pady=5)
+    
+    blur_slider = tk.Scale(root, from_=0, to=25, orient=tk.HORIZONTAL, 
+                          label="Blur", length=300,
+                          command=on_blur_change)
+    blur_slider.set(blur_value)
+    blur_slider.pack(pady=5)
+    
+    threshold_slider = tk.Scale(root, from_=0, to=100, orient=tk.HORIZONTAL, 
+                               label="Threshold", length=300,
+                               command=on_threshold_change)
+    threshold_slider.set(int(threshold_value * 100))
+    threshold_slider.pack(pady=5)
+    
+    return root
 
 # Callback function for threshold slider
 def on_threshold_change(val):
@@ -42,20 +68,20 @@ def on_threshold_change(val):
 # Callback functions for sliders
 def on_brightness_change(val):
     global brightness_value
-    brightness_value = val - 50  # Range -50 to 50
+    brightness_value = int(val) - 50  # Range -50 to 50
 
 def on_contrast_change(val):
     global contrast_value
-    contrast_value = val / 10.0  # Range 0.0 to 3.0
+    contrast_value = int(val) / 10.0  # Range 0.0 to 3.0
 
 def on_saturation_change(val):
     global saturation_value
-    saturation_value = val / 10.0  # Range 0.0 to 3.0
+    saturation_value = int(val) / 10.0  # Range 0.0 to 3.0
 
 def on_blur_change(val):
     global blur_value
     # Ensure the value is within the range 5 to 25 and is odd
-    blur_value = max(5, val if val % 2 == 1 else val + 1)
+    blur_value = max(5, int(val) if int(val) % 2 == 1 else int(val) + 1)
 
 def apply_image_adjustments(frame):
     # Convert to float for processing
@@ -86,7 +112,7 @@ def apply_image_adjustments(frame):
     
     return adjusted
 
-def run_inference_camera(model_version_epoch="Small25_v8"):
+def run_inference_camera(model_version_epoch):
     # Get the script's directory
     base_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -96,8 +122,8 @@ def run_inference_camera(model_version_epoch="Small25_v8"):
     # Load the YOLO model
     model = YOLO(model_path, task='detect')
 
-    # Create control panel with sliders
-    create_control_panel(version=model_version_epoch)
+    # Create control panel with sliders and get the root window
+    root = create_control_panel(model_version_epoch)
 
     # Open the camera (0 is usually the default camera)
     cap = cv2.VideoCapture(0)
@@ -107,7 +133,7 @@ def run_inference_camera(model_version_epoch="Small25_v8"):
         return
 
     print("Press 'q' to quit.")
-    
+
     # Create named windows and set them to stay on top
     cv2.namedWindow("Camera Inference", cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Camera Inference", cv2.WND_PROP_TOPMOST, 1)
@@ -120,6 +146,10 @@ def run_inference_camera(model_version_epoch="Small25_v8"):
     frame_time = 1.0 / target_fps
     
     while True:
+        # Process Tkinter events to keep the UI responsive
+        root.update_idletasks()
+        root.update()
+        
         # Track frame start time
         frame_start = time.time()
         
@@ -175,6 +205,7 @@ def run_inference_camera(model_version_epoch="Small25_v8"):
     # Release the camera and close all OpenCV windows
     cap.release()
     cv2.destroyAllWindows()
+    root.destroy()  # Properly destroy the Tkinter window
 
 if __name__ == "__main__":
     # Create a dictionary mapping indices to model names
