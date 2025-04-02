@@ -4,7 +4,7 @@ import os
 import numpy as np
 import time 
 import tkinter as tk
-
+import pyautogui
 
 '''
 Cut100 -> overfit 
@@ -58,12 +58,43 @@ def create_control_panel(version):
     threshold_slider.set(int(threshold_value * 100))
     threshold_slider.pack(pady=5)
     
+    # Add a reset button to restore default values
+    def reset_values():
+        brightness_slider.set(1)
+        contrast_slider.set(10)
+        saturation_slider.set(10)
+        blur_slider.set(5)
+        threshold_slider.set(20)
+    
+    # Add a reset button to restore default values
+    def screenshot():
+        # Define the folder path where the screenshot will be saved
+        folder_path = "D:\Enzo\CameraDetection\py-src\YOLO_ImagesDetection\screenshots"
+        
+        # Ensure the folder exists
+        os.makedirs(folder_path, exist_ok=True)
+        
+        file_path = os.path.join(folder_path, f"screenshot_.png")
+        
+        # Take a screenshot of the entire screen
+        screenshot = pyautogui.screenshot()
+        
+        # Save the screenshot to the specified path
+        screenshot.save(file_path)
+        print(f"Screenshot saved to: {file_path}")
+    
+    reset_button = tk.Button(root, text="Reset to Defaults", command=reset_values)
+    reset_button.pack(pady=10)
+
+    save_button = tk.Button(root, text="Screenshot", command=screenshot)
+    save_button.pack(pady=10)
     return root
 
 # Callback function for threshold slider
 def on_threshold_change(val):
     global threshold_value
-    threshold_value = val / 100.0  # Normalize to range 0.0 to 1.0
+    threshold_value = float(val) / 100.0  # Normalize to range 0.0 to 1.0
+    print(f"Threshold changed to: {threshold_value}")
 
 # Callback functions for sliders
 def on_brightness_change(val):
@@ -163,6 +194,7 @@ def run_inference_camera(model_version_epoch):
         
         # Run inference on the adjusted frame
         results = model.predict(source=adjusted_frame, save=False, imgsz=640, conf=threshold_value)
+        print(f"Using threshold value: {threshold_value} for inference")
 
         # Display the results
         for r in results:
