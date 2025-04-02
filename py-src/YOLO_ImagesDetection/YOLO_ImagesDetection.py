@@ -24,6 +24,8 @@ threshold_value = 0.2
 def create_control_panel(version):
     # Create a window for the sliders
     cv2.namedWindow(version)
+    # Make the window stay on top
+    cv2.setWindowProperty(version, cv2.WND_PROP_TOPMOST, 1)
     
     # Create sliders
     cv2.createTrackbar('Brightness', version, 0, 100, on_brightness_change)
@@ -105,6 +107,13 @@ def run_inference_camera(model_version_epoch="Small25_v8"):
         return
 
     print("Press 'q' to quit.")
+    
+    # Create named windows and set them to stay on top
+    cv2.namedWindow("Camera Inference", cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty("Camera Inference", cv2.WND_PROP_TOPMOST, 1)
+    
+    cv2.namedWindow("Adjusted Frame", cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty("Adjusted Frame", cv2.WND_PROP_TOPMOST, 1)
     
     # FPS limiting variables
     target_fps = 24
