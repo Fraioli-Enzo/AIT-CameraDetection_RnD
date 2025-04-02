@@ -24,7 +24,7 @@ threshold_value = 0.2
 def create_control_panel(version):
     # Create tkinter window
     root = tk.Tk()
-    root.title(f"Camera Controls - {version}")
+    root.title(f"{version}")
     root.attributes('-topmost', True)  # Make window stay on top
     
     # Set the initial slider values
@@ -69,7 +69,7 @@ def create_control_panel(version):
     # Add a reset button to restore default values
     def screenshot():
         # Define the folder path where the screenshot will be saved
-        folder_path = "D:\Enzo\CameraDetection\py-src\YOLO_ImagesDetection\screenshots"
+        folder_path = "D:/Enzo/CameraDetection/py-src/YOLO_ImagesDetection/screenshots"
         
         # Ensure the folder exists
         os.makedirs(folder_path, exist_ok=True)
@@ -201,7 +201,7 @@ def run_inference_camera(model_version_epoch):
             # Extract detections and print coordinates
             boxes = r.boxes
             if len(boxes) > 0:
-                print("\n--- Detected Objects ---")
+                print("\n--- Detected Defects ---")
                 
             for box in boxes:
                 # Get coordinates (x1, y1, x2, y2 format)
@@ -215,7 +215,8 @@ def run_inference_camera(model_version_epoch):
                 cls_name = model.names[cls_id]
                 
                 # Print information
-                print(f"Class: {cls_name} | Confidence: {confidence:.2f} | Coordinates: ({int(x1)}, {int(y1)}); ({int(x2)}, {int(y1)}); ({int(x2)}, {int(y2)}); ({int(x1)}, {int(y2)});)") # top-left, top-right, bottom-right, bottom-left
+                #Put 'Class: {cls_name} |' if tere is class name in dataset with which the model have been trained
+                print(f"Confidence: {confidence:.2f} | Coordinates: ({int(x1)}, {int(y1)}); ({int(x2)}, {int(y1)}); ({int(x2)}, {int(y2)}); ({int(x1)}, {int(y2)});)") # top-left, top-right, bottom-right, bottom-left
             
             img = r.plot()
             cv2.imshow("Camera Inference", img)
@@ -243,8 +244,8 @@ if __name__ == "__main__":
     # Create a dictionary mapping indices to model names
     models = {
         "1": "Small25_v8",
-        "2": "Small25_v11",
-        "3": "Small50_v8",
+        "2": "Small50_v8",
+        "3": "Small25_v11",
         "4": "Small50_v11"
     }
     
