@@ -144,7 +144,7 @@ def run_inference_camera(model_version_epoch="25"):
                 cls_name = model.names[cls_id]
                 
                 # Print information
-                print(f"Class: {cls_name} | Confidence: {confidence:.2f} | Coordinates: TopLeft({int(x1)}, {int(y1)}) BottomRight({int(x2)}, {int(y2)})")
+                print(f"Class: {cls_name} | Confidence: {confidence:.2f} | Coordinates: ({int(x1)}, {int(y1)}); ({int(x2)}, {int(y1)}); ({int(x2)}, {int(y2)}); ({int(x1)}, {int(y2)});)") # top-left, top-right, bottom-right, bottom-left
             
             img = r.plot()
             cv2.imshow("Camera Inference", img)
