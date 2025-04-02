@@ -15,16 +15,23 @@ brightness_value = 0
 contrast_value = 2
 saturation_value = 2
 blur_value = 5
+threshold_value = 0.2
 
-def create_control_panel():
+def create_control_panel(version):
     # Create a window for the sliders
-    cv2.namedWindow('Camera Controls')
+    cv2.namedWindow(version)
     
     # Create sliders
-    cv2.createTrackbar('Brightness', 'Camera Controls', 0, 100, on_brightness_change)
-    cv2.createTrackbar('Contrast', 'Camera Controls', 10, 30, on_contrast_change)
-    cv2.createTrackbar('Saturation', 'Camera Controls', 10, 30, on_saturation_change)
-    cv2.createTrackbar('Blur', 'Camera Controls', 5, 25, on_blur_change)
+    cv2.createTrackbar('Brightness', version, 0, 100, on_brightness_change)
+    cv2.createTrackbar('Contrast', version, 10, 30, on_contrast_change)
+    cv2.createTrackbar('Saturation', version, 10, 30, on_saturation_change)
+    cv2.createTrackbar('Blur', version, 5, 25, on_blur_change)
+    cv2.createTrackbar('Threshold', version, int(threshold_value * 100), 100, on_threshold_change) 
+
+# Callback function for threshold slider
+def on_threshold_change(val):
+    global threshold_value
+    threshold_value = val / 100.0  # Normalize to range 0.0 to 1.0
 
 # Callback functions for sliders
 def on_brightness_change(val):
@@ -41,8 +48,8 @@ def on_saturation_change(val):
 
 def on_blur_change(val):
     global blur_value
-    blur_value = val if val % 2 == 1 else val + 1  # Ensure odd number for Gaussian kernel
-
+    # Ensure the value is within the range 5 to 25 and is odd
+    blur_value = max(5, val if val % 2 == 1 else val + 1)
 
 def apply_image_adjustments(frame):
     # Convert to float for processing
@@ -85,7 +92,7 @@ def run_inference_camera(model_version_epoch="25"):
     model = YOLO(model_path, task='detect')
 
     # Create control panel with sliders
-    create_control_panel()
+    create_control_panel(version=model_version_epoch)
 
     # Open the camera (0 is usually the default camera)
     cap = cv2.VideoCapture(0)
@@ -113,7 +120,7 @@ def run_inference_camera(model_version_epoch="25"):
         adjusted_frame = apply_image_adjustments(frame)
         
         # Run inference on the adjusted frame
-        results = model.predict(source=adjusted_frame, save=False, imgsz=640)
+        results = model.predict(source=adjusted_frame, save=False, imgsz=640, conf=threshold_value)
 
         # Display the results
         for r in results:
