@@ -84,7 +84,7 @@ def apply_image_adjustments(frame):
     
     return adjusted
 
-def run_inference_camera(model_version_epoch="25"):
+def run_inference_camera(model_version_epoch="Small25_v8"):
     # Get the script's directory
     base_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -168,5 +168,10 @@ def run_inference_camera(model_version_epoch="25"):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    model_version_epoch = input("Enter the model version epoch (default is 25): ")
+    print("Choose the model you want to use in this list:")
+    print("1. Small25_v8")
+    print("2. Small25_v11")
+    print("3. Small50_v8")
+    print("4. Small50_v11")
+    model_version_epoch = input("Enter the model index (default is 1): ")
     run_inference_camera(model_version_epoch)
