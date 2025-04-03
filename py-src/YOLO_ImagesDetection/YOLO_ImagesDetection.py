@@ -10,8 +10,6 @@ import pyautogui
 Cut100 -> overfit 
 Cut50 -> medium
 Cut75 -> overfit
-
-THIS IS A TEST
 '''
 
 # Global variables for slider values
@@ -216,7 +214,7 @@ def run_inference_camera(model_version_epoch):
                 
                 # Print information
                 #Put 'Class: {cls_name} |' if tere is class name in dataset with which the model have been trained
-                print(f"Confidence: {confidence:.2f} | Coordinates: ({int(x1)}, {int(y1)}); ({int(x2)}, {int(y1)}); ({int(x2)}, {int(y2)}); ({int(x1)}, {int(y2)});)") # top-left, top-right, bottom-right, bottom-left
+                print(f"Confidence: {confidence:.2f} | Coordinates: ({int(x1)}, {int(y1)}); ({int(x2)}, {int(y1)}); ({int(x2)}, {int(y2)}); ({int(x1)}, {int(y2)}))") # top-left, top-right, bottom-right, bottom-left
             
             img = r.plot()
             cv2.imshow("Camera Inference", img)
@@ -246,7 +244,8 @@ if __name__ == "__main__":
         "1": "Small25_v8",
         "2": "Small50_v8",
         "3": "Small25_v11",
-        "4": "Small50_v11"
+        "4": "Small50_v11",
+        "5": "Cut50",
     }
     
     print("Choose the model you want to use:")
