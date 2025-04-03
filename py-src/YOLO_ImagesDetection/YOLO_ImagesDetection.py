@@ -15,8 +15,8 @@ Cut75 -> overfit
 # Global variables for slider values
 brightness_value = 0
 contrast_value = 1
-saturation_value = 1
-blur_value = 5
+saturation_value = 0.5
+blur_value = 25
 threshold_value = 0.2
 
 def create_control_panel(version):
@@ -88,13 +88,11 @@ def create_control_panel(version):
     save_button.pack(pady=10)
     return root
 
-# Callback function for threshold slider
 def on_threshold_change(val):
     global threshold_value
     threshold_value = float(val) / 100.0  # Normalize to range 0.0 to 1.0
     print(f"Threshold changed to: {threshold_value}")
 
-# Callback functions for sliders
 def on_brightness_change(val):
     global brightness_value
     brightness_value = int(val) - 50  # Range -50 to 50
@@ -222,6 +220,7 @@ def run_inference_camera(model_version_epoch):
         # Also display the original frame with adjustments for comparison
         cv2.imshow("Adjusted Frame", adjusted_frame)
 
+
         # Calculate elapsed time for this frame
         elapsed = time.time() - frame_start
         
@@ -238,6 +237,7 @@ def run_inference_camera(model_version_epoch):
     cv2.destroyAllWindows()
     root.destroy()  # Properly destroy the Tkinter window
 
+
 if __name__ == "__main__":
     # Create a dictionary mapping indices to model names
     models = {
@@ -247,7 +247,8 @@ if __name__ == "__main__":
         "4": "Small50_v11",
         "5": "Cut50",
         "6": "newSmall25_v8",
-        "7": "newSmall25_v11",
+        "7": "newSmall25_v11", ## Good one
+        "8": "newSmall50_v11",
     }
     
     print("Choose the model you want to use:")
