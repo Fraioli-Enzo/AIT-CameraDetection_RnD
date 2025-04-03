@@ -219,7 +219,8 @@ def run_inference_camera(model_version_epoch):
         
         # Also display the original frame with adjustments for comparison
         cv2.imshow("Adjusted Frame", adjusted_frame)
-
+        histo = live_histogram(adjusted_frame)
+        cv2.imshow("Histogram", histo)
 
         # Calculate elapsed time for this frame
         elapsed = time.time() - frame_start
@@ -236,6 +237,30 @@ def run_inference_camera(model_version_epoch):
     cap.release()
     cv2.destroyAllWindows()
     root.destroy()  # Properly destroy the Tkinter window
+
+def live_histogram(frame):
+    # Convert the frame to HSV color space
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    # Calculate the histogram for each channel in the HSV color space
+    hist_h = cv2.calcHist([hsv], [0], None, [256], [0, 256])
+    hist_s = cv2.calcHist([hsv], [1], None, [256], [0, 256])
+    hist_v = cv2.calcHist([hsv], [2], None, [256], [0, 256])
+
+    # Normalize the histograms
+    hist_h = cv2.normalize(hist_h, hist_h, 0, 255, cv2.NORM_MINMAX)
+    hist_s = cv2.normalize(hist_s, hist_s, 0, 255, cv2.NORM_MINMAX)
+    hist_v = cv2.normalize(hist_v, hist_v, 0, 255, cv2.NORM_MINMAX)
+
+    # Create an image to display the histograms
+    hist_image = np.zeros((300, 256, 3), dtype=np.uint8)
+
+    # Draw the histograms
+    for x in range(256):
+        cv2.line(hist_image, (x, 300), (x, 300 - int(hist_h[x])), (255, 0, 0), 1)
+        cv2.line(hist_image, (x, 300), (x, 300 - int(hist_s[x])), (0, 255, 0), 1)
+        cv2.line(hist_image, (x, 300), (x, 300 - int(hist_v[x])), (0, 0, 255), 1)
+
+    return hist_image
 
 
 if __name__ == "__main__":
