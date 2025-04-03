@@ -246,6 +246,7 @@ if __name__ == "__main__":
         "3": "Small25_v11",
         "4": "Small50_v11",
         "5": "Cut50",
+        "6": "newSmall25_v8",
     }
     
     print("Choose the model you want to use:")
