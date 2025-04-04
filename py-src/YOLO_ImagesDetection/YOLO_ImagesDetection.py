@@ -15,7 +15,7 @@ Cut75 -> overfit
 brightness_value = 0
 contrast_value = 1
 saturation_value = 0.5
-blur_value = 25
+blur_value = 15
 threshold_value = 0.2
 
 def create_control_panel(version):
@@ -49,7 +49,7 @@ def create_control_panel(version):
     blur_slider.set(blur_value)
     blur_slider.pack(pady=5)
     
-    threshold_slider = tk.Scale(root, from_=0, to=100, orient=tk.HORIZONTAL, 
+    threshold_slider = tk.Scale(root, from_=1, to=100, orient=tk.HORIZONTAL, 
                                label="Threshold", length=300,
                                command=on_threshold_change)
     threshold_slider.set(int(threshold_value * 100))
