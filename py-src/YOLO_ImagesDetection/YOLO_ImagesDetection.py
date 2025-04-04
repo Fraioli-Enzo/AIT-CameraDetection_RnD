@@ -56,7 +56,7 @@ def create_control_panel(version):
     threshold_slider.pack(pady=5)
     
     # Add a reset button to restore default values
-    def reset_values():
+    def _reset_values():
         brightness_slider.set(1)
         contrast_slider.set(10)
         saturation_slider.set(10)
@@ -64,7 +64,7 @@ def create_control_panel(version):
         threshold_slider.set(20)
     
     # Add a reset button to restore default values
-    def screenshot():
+    def _screenshot():
         # Define the folder path where the screenshot will be saved
         folder_path = "D:/Enzo/CameraDetection/py-src/YOLO_ImagesDetection/screenshots"
         
@@ -80,12 +80,17 @@ def create_control_panel(version):
         screenshot.save(file_path)
         print(f"Screenshot saved to: {file_path}")
     
-    reset_button = tk.Button(root, text="Reset to Defaults", command=reset_values)
+    reset_button = tk.Button(root, text="Reset to Defaults", command=_reset_values)
     reset_button.pack(pady=10)
 
-    save_button = tk.Button(root, text="Screenshot", command=screenshot)
+    save_button = tk.Button(root, text="Screenshot", command=_screenshot)
     save_button.pack(pady=10)
-    return root
+
+    # Add a label to display dynamic text
+    dynamic_label = tk.Label(root, text="Dynamic Text Here", font=("Helvetica", 12))
+    dynamic_label.pack(pady=10)
+
+    return root, dynamic_label
 
 def on_threshold_change(val):
     global threshold_value
@@ -148,8 +153,8 @@ def run_inference_camera(model_version_epoch):
     # Load the YOLO model
     model = YOLO(model_path, task='detect')
 
-    # Create control panel with sliders and get the root window
-    root = create_control_panel(model_version_epoch)
+    # Create control panel with sliders and get the root window and dynamic label
+    root, dynamic_label = create_control_panel(model_version_epoch)
 
     # Open the camera (0 is usually the default camera)
     cap = cv2.VideoCapture(0)
@@ -169,9 +174,6 @@ def run_inference_camera(model_version_epoch):
     
     cv2.namedWindow("Histogram", cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Histogram", cv2.WND_PROP_TOPMOST, 1)
-
-    cv2.namedWindow("Red Channel", cv2.WINDOW_NORMAL)
-    cv2.setWindowProperty("Red Channel", cv2.WND_PROP_TOPMOST, 1)
     
     while True:
         # Process Tkinter events to keep the UI responsive
@@ -208,8 +210,8 @@ def run_inference_camera(model_version_epoch):
                 cls_id = int(box.cls[0].item())
                 cls_name = model.names[cls_id]
                 
-                # Print information
-                #Put 'Class: {cls_name} |' if tere is class name in dataset with which the model have been trained
+                ## Print information
+                ## Put 'Class: {cls_name} |' if tere is class name in dataset with which the model have been trained
                 # print(f"Confidence: {confidence:.2f} | Coordinates: ({int(x1)}, {int(y1)}); ({int(x2)}, {int(y1)}); ({int(x2)}, {int(y2)}); ({int(x1)}, {int(y2)}))") # top-left, top-right, bottom-right, bottom-left
             
             img = r.plot()
@@ -219,9 +221,11 @@ def run_inference_camera(model_version_epoch):
         cv2.imshow("Adjusted Frame", adjusted_frame)
         histo = live_histogram(adjusted_frame)
         cv2.imshow("Histogram", histo)
-        test = extract_red_channel(adjusted_frame)
-        cv2.imshow("Red Channel", test)
-            
+        mean, std = extract_red_channel(adjusted_frame)
+        # Update the dynamic label with mean and std values
+        dynamic_label.config(text=f"Red Channel - Mean: {mean:.2f}, Std: {std:.2f}")
+        
+        
         # Break the loop if 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -254,13 +258,14 @@ def live_histogram(frame):
     return hist_image
 
 def extract_red_channel(frame):
-    # Create a copy of the frame to modify
-    red_only_image = np.zeros_like(frame)
-    
     # Extract the red channel
     red_channel = frame[:, :, 2]
     
-    return red_only_image
+    mean = np.mean(red_channel)
+    std = np.std(red_channel)
+    print(f"Red channel mean: {mean}, std: {std}")
+
+    return mean, std
 
 if __name__ == "__main__":
     # Create a dictionary mapping indices to model names
