@@ -87,10 +87,16 @@ def create_control_panel(version):
     save_button.pack(pady=10)
 
     # Add a label to display dynamic text
-    dynamic_label = tk.Label(root, text="Dynamic Text Here", font=("Helvetica", 12))
-    dynamic_label.pack(pady=10)
+    dynamic_red_label = tk.Label(root, text="Dynamic Text Here", font=("Helvetica", 12))
+    dynamic_red_label.pack(pady=10)
 
-    return root, dynamic_label
+    dynamic_green_label = tk.Label(root, text="Dynamic Text Here", font=("Helvetica", 12))
+    dynamic_green_label.pack(pady=10)
+
+    dynamic_blue_label = tk.Label(root, text="Dynamic Text Here", font=("Helvetica", 12))
+    dynamic_blue_label.pack(pady=10)
+
+    return root, dynamic_red_label, dynamic_green_label, dynamic_blue_label
 
 def on_threshold_change(val):
     global threshold_value
@@ -154,7 +160,7 @@ def run_inference_camera(model_version_epoch):
     model = YOLO(model_path, task='detect')
 
     # Create control panel with sliders and get the root window and dynamic label
-    root, dynamic_label = create_control_panel(model_version_epoch)
+    root, dynamic_red_label, dynamic_green_label, dynamic_blue_label = create_control_panel(model_version_epoch)
 
     # Open the camera (0 is usually the default camera)
     cap = cv2.VideoCapture(0)
@@ -221,9 +227,11 @@ def run_inference_camera(model_version_epoch):
         cv2.imshow("Adjusted Frame", adjusted_frame)
         histo = live_histogram(adjusted_frame)
         cv2.imshow("Histogram", histo)
-        mean, std = extract_red_channel(adjusted_frame)
+        red_mean, red_std, green_mean, green_std, blue_mean, blue_std = extract_red_channel(adjusted_frame)
         # Update the dynamic label with mean and std values
-        dynamic_label.config(text=f"Red Channel - Mean: {mean:.2f}, Std: {std:.2f}")
+        dynamic_red_label.config(text=f"Red Channel - Mean: {red_mean:.2f}, Std: {red_std:.2f}")
+        dynamic_green_label.config(text=f"Green Channel - Mean: {green_mean:.2f}, Std: {green_std:.2f}")
+        dynamic_blue_label.config(text=f"Blue Channel - Mean: {blue_mean:.2f}, Std: {blue_std:.2f}")
         
         
         # Break the loop if 'q' is pressed
@@ -260,12 +268,19 @@ def live_histogram(frame):
 def extract_red_channel(frame):
     # Extract the red channel
     red_channel = frame[:, :, 2]
+    green_channel = frame[:, :, 1]
+    blue_channel = frame[:, :, 0]
     
-    mean = np.mean(red_channel)
-    std = np.std(red_channel)
-    print(f"Red channel mean: {mean}, std: {std}")
+    red_mean = np.mean(red_channel)
+    red_std = np.std(red_channel)
 
-    return mean, std
+    green_mean = np.mean(green_channel)
+    green_std = np.std(green_channel)
+
+    blue_mean = np.mean(blue_channel)
+    blue_std = np.std(blue_channel)
+
+    return red_mean, red_std, green_mean, green_std, blue_mean, blue_std
 
 if __name__ == "__main__":
     # Create a dictionary mapping indices to model names
@@ -285,12 +300,12 @@ if __name__ == "__main__":
         print(f"{idx}. {model}")
     
     # Get user input with default value
-    model_index = input("Enter the model index (default is 1): ").strip()
+    model_index = input("Enter the model index (default is 7): ").strip()
     
     # Use default if input is empty or invalid
     if not model_index or model_index not in models:
-        model_index = "1"
-        print("Using default model: Small25_v8")
+        model_index = "7"
+        print("Using default model: newSmall25_v11")
     
     # Set the model_version_epoch based on the selected index
     model_version_epoch = models[model_index]
