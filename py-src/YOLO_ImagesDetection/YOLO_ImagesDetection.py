@@ -181,9 +181,19 @@ def run_inference_camera(model_version_epoch):
         
         # Apply image adjustments based on slider values
         adjusted_frame = apply_image_adjustments(frame)
-        results = model.predict(source=adjusted_frame, save=False, imgsz=640, conf=threshold_value)
-        print(f"Using threshold value: {threshold_value} for inference")
+        cv2.imshow("Adjusted Frame", adjusted_frame)
 
+        # Calculte and display the histogram
+        histo = live_histogram(adjusted_frame)
+        cv2.imshow("Histogram", histo)
+        red_mean, red_std, green_mean, green_std, blue_mean, blue_std = extract_red_channel(adjusted_frame)
+
+        # Update the dynamic label with mean and std values
+        dynamic_red_label.config(text=f"Red Channel - Mean: {red_mean:.2f}, Std: {red_std:.2f}")
+        dynamic_green_label.config(text=f"Green Channel - Mean: {green_mean:.2f}, Std: {green_std:.2f}")
+        dynamic_blue_label.config(text=f"Blue Channel - Mean: {blue_mean:.2f}, Std: {blue_std:.2f}")
+        
+        results = model.predict(source=adjusted_frame, save=False, imgsz=640, conf=threshold_value)
         for r in results:
             # Extract detections and print coordinates
             boxes = r.boxes
@@ -202,17 +212,6 @@ def run_inference_camera(model_version_epoch):
             
             img = r.plot()
             cv2.imshow("Camera Inference", img)
-        
-        # Also display the original frame with adjustments for comparison
-        cv2.imshow("Adjusted Frame", adjusted_frame)
-        histo = live_histogram(adjusted_frame)
-        cv2.imshow("Histogram", histo)
-        red_mean, red_std, green_mean, green_std, blue_mean, blue_std = extract_red_channel(adjusted_frame)
-
-        # Update the dynamic label with mean and std values
-        dynamic_red_label.config(text=f"Red Channel - Mean: {red_mean:.2f}, Std: {red_std:.2f}")
-        dynamic_green_label.config(text=f"Green Channel - Mean: {green_mean:.2f}, Std: {green_std:.2f}")
-        dynamic_blue_label.config(text=f"Blue Channel - Mean: {blue_mean:.2f}, Std: {blue_std:.2f}")
         
         # Break the loop if 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
