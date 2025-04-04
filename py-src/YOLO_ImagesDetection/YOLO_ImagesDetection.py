@@ -2,7 +2,6 @@ from ultralytics import YOLO
 import cv2
 import os
 import numpy as np
-import time 
 import tkinter as tk
 import pyautogui
 
@@ -168,17 +167,16 @@ def run_inference_camera(model_version_epoch):
     cv2.namedWindow("Adjusted Frame", cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Adjusted Frame", cv2.WND_PROP_TOPMOST, 1)
     
-    # FPS limiting variables
-    target_fps = 24
-    frame_time = 1.0 / target_fps
+    cv2.namedWindow("Histogram", cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty("Histogram", cv2.WND_PROP_TOPMOST, 1)
+
+    cv2.namedWindow("Red Channel", cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty("Red Channel", cv2.WND_PROP_TOPMOST, 1)
     
     while True:
         # Process Tkinter events to keep the UI responsive
         root.update_idletasks()
         root.update()
-        
-        # Track frame start time
-        frame_start = time.time()
         
         ret, frame = cap.read()
         if not ret:
@@ -190,14 +188,14 @@ def run_inference_camera(model_version_epoch):
         
         # Run inference on the adjusted frame
         results = model.predict(source=adjusted_frame, save=False, imgsz=640, conf=threshold_value)
-        print(f"Using threshold value: {threshold_value} for inference")
+        # print(f"Using threshold value: {threshold_value} for inference")
 
         # Display the results
         for r in results:
             # Extract detections and print coordinates
             boxes = r.boxes
-            if len(boxes) > 0:
-                print("\n--- Detected Defects ---")
+            # if len(boxes) > 0:
+                # print("\n--- Detected Defects ---")
                 
             for box in boxes:
                 # Get coordinates (x1, y1, x2, y2 format)
@@ -212,7 +210,7 @@ def run_inference_camera(model_version_epoch):
                 
                 # Print information
                 #Put 'Class: {cls_name} |' if tere is class name in dataset with which the model have been trained
-                print(f"Confidence: {confidence:.2f} | Coordinates: ({int(x1)}, {int(y1)}); ({int(x2)}, {int(y1)}); ({int(x2)}, {int(y2)}); ({int(x1)}, {int(y2)}))") # top-left, top-right, bottom-right, bottom-left
+                # print(f"Confidence: {confidence:.2f} | Coordinates: ({int(x1)}, {int(y1)}); ({int(x2)}, {int(y1)}); ({int(x2)}, {int(y2)}); ({int(x1)}, {int(y2)}))") # top-left, top-right, bottom-right, bottom-left
             
             img = r.plot()
             cv2.imshow("Camera Inference", img)
@@ -221,15 +219,8 @@ def run_inference_camera(model_version_epoch):
         cv2.imshow("Adjusted Frame", adjusted_frame)
         histo = live_histogram(adjusted_frame)
         cv2.imshow("Histogram", histo)
-        if is_mostly_red(adjusted_frame):
-            print("##################@@@@@@@@@################")
-    
-        # Calculate elapsed time for this frame
-        elapsed = time.time() - frame_start
-        
-        # If we processed the frame too quickly, wait to maintain target FPS
-        if elapsed < frame_time:
-            time.sleep(frame_time - elapsed)
+        test = extract_red_channel(adjusted_frame)
+        cv2.imshow("Red Channel", test)
             
         # Break the loop if 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -262,32 +253,14 @@ def live_histogram(frame):
 
     return hist_image
 
-def is_mostly_red(frame, threshold=200, red_percentage=50):
-    """
-    Determines if the camera view is mostly red.
+def extract_red_channel(frame):
+    # Create a copy of the frame to modify
+    red_only_image = np.zeros_like(frame)
     
-    Args:
-        frame (numpy.ndarray): The input frame in BGR format.
-        threshold (int): The intensity threshold for the red channel (0-255).
-        red_percentage (float): The percentage of red-dominant pixels to classify as "mostly red."
-    
-    Returns:
-        bool: True if the view is mostly red, False otherwise.
-    """
-    # Extract the red channel (channel index 2 in BGR)
+    # Extract the red channel
     red_channel = frame[:, :, 2]
     
-    # Count the number of pixels with red intensity above the threshold
-    red_dominant_pixels = np.sum(red_channel > threshold)
-    
-    # Calculate the total number of pixels
-    total_pixels = frame.shape[0] * frame.shape[1]
-    
-    # Calculate the percentage of red-dominant pixels
-    red_dominance = (red_dominant_pixels / total_pixels) * 100
-    
-    # Check if the red dominance exceeds the specified percentage
-    return red_dominance > red_percentage
+    return red_only_image
 
 if __name__ == "__main__":
     # Create a dictionary mapping indices to model names
