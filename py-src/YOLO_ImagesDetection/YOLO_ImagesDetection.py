@@ -11,14 +11,39 @@ Cut50 -> medium
 Cut75 -> overfit
 '''
 
-# Global variables for slider values
+# Global variables for slider values --------------- 
 brightness_value = 0
 contrast_value = 1
 saturation_value = 0.5
 blur_value = 15
 threshold_value = 0.2
+#---------------------------------------------------
 
+# UI for camera settings ---------------------------
 def create_control_panel(version):
+    def _reset_values():
+        brightness_slider.set(1)
+        contrast_slider.set(10)
+        saturation_slider.set(10)
+        blur_slider.set(5)
+        threshold_slider.set(20)
+    
+    def _screenshot():
+        # Define the folder path where the screenshot will be saved
+        folder_path = "D:/Enzo/CameraDetection/py-src/YOLO_ImagesDetection/screenshots"
+        
+        # Ensure the folder exists
+        os.makedirs(folder_path, exist_ok=True)
+        count = len([name for name in os.listdir(folder_path) if name.startswith("screenshot")])
+        file_path = os.path.join(folder_path, f"screenshot_{count}.png")
+        
+        # Take a screenshot of the entire screen
+        screenshot = pyautogui.screenshot()
+        
+        # Save the screenshot to the specified path
+        screenshot.save(file_path)
+        print(f"Screenshot saved to: {file_path}")
+
     # Create tkinter window
     root = tk.Tk()
     root.title(f"{version}")
@@ -54,39 +79,13 @@ def create_control_panel(version):
                                command=on_threshold_change)
     threshold_slider.set(int(threshold_value * 100))
     threshold_slider.pack(pady=5)
-    
-    # Add a reset button to restore default values
-    def _reset_values():
-        brightness_slider.set(1)
-        contrast_slider.set(10)
-        saturation_slider.set(10)
-        blur_slider.set(5)
-        threshold_slider.set(20)
-    
-    # Add a reset button to restore default values
-    def _screenshot():
-        # Define the folder path where the screenshot will be saved
-        folder_path = "D:/Enzo/CameraDetection/py-src/YOLO_ImagesDetection/screenshots"
-        
-        # Ensure the folder exists
-        os.makedirs(folder_path, exist_ok=True)
-        count = len([name for name in os.listdir(folder_path) if name.startswith("screenshot")])
-        file_path = os.path.join(folder_path, f"screenshot_{count}.png")
-        
-        # Take a screenshot of the entire screen
-        screenshot = pyautogui.screenshot()
-        
-        # Save the screenshot to the specified path
-        screenshot.save(file_path)
-        print(f"Screenshot saved to: {file_path}")
-    
+       
     reset_button = tk.Button(root, text="Reset to Defaults", command=_reset_values)
     reset_button.pack(pady=10)
 
     save_button = tk.Button(root, text="Screenshot", command=_screenshot)
     save_button.pack(pady=10)
 
-    # Add a label to display dynamic text
     dynamic_red_label = tk.Label(root, text="Dynamic Text Here", font=("Helvetica", 12))
     dynamic_red_label.pack(pady=10)
 
@@ -95,6 +94,7 @@ def create_control_panel(version):
 
     dynamic_blue_label = tk.Label(root, text="Dynamic Text Here", font=("Helvetica", 12))
     dynamic_blue_label.pack(pady=10)
+
 
     return root, dynamic_red_label, dynamic_green_label, dynamic_blue_label
 
@@ -121,24 +121,15 @@ def on_blur_change(val):
     blur_value = max(5, int(val) if int(val) % 2 == 1 else int(val) + 1)
 
 def apply_image_adjustments(frame):
-    # Convert to float for processing
+    # Convert to float and process brightness and contrast
     adjusted = frame.astype(np.float32)
-    
-    # Apply brightness
     adjusted = adjusted + brightness_value
-    
-    # Apply contrast
     adjusted = adjusted * contrast_value
-    
-    # Clip values to valid range
     adjusted = np.clip(adjusted, 0, 255).astype(np.uint8)
     
     # Convert to HSV for saturation adjustment
     hsv = cv2.cvtColor(adjusted, cv2.COLOR_BGR2HSV).astype(np.float32)
-    
-    # Apply saturation
     hsv[:, :, 1] = hsv[:, :, 1] * saturation_value
-    
     
     hsv = np.clip(hsv, 0, 255).astype(np.uint8)
     adjusted = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
@@ -148,15 +139,13 @@ def apply_image_adjustments(frame):
         adjusted = cv2.GaussianBlur(adjusted, (blur_value, blur_value), 0)
     
     return adjusted
+#---------------------------------------------------
 
+# Process camera frames and run inference ----------
 def run_inference_camera(model_version_epoch):
-    # Get the script's directory
+    # Get the script's directory & Build the path to the model
     base_path = os.path.dirname(os.path.abspath(__file__))
-
-    # Build the path to the model
     model_path = os.path.join(base_path, f"best{model_version_epoch}.torchscript")
-
-    # Load the YOLO model
     model = YOLO(model_path, task='detect')
 
     # Create control panel with sliders and get the root window and dynamic label
@@ -164,14 +153,12 @@ def run_inference_camera(model_version_epoch):
 
     # Open the camera (0 is usually the default camera)
     cap = cv2.VideoCapture(0)
-
     if not cap.isOpened():
         print("Error: Could not open the camera.")
         return
-
     print("Press 'q' to quit.")
 
-    # Create named windows and set them to stay on top
+    # Create named windows and set them to stay on top of other windows
     cv2.namedWindow("Camera Inference", cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Camera Inference", cv2.WND_PROP_TOPMOST, 1)
     
@@ -181,6 +168,7 @@ def run_inference_camera(model_version_epoch):
     cv2.namedWindow("Histogram", cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Histogram", cv2.WND_PROP_TOPMOST, 1)
     
+    # Process frames in a loop
     while True:
         # Process Tkinter events to keep the UI responsive
         root.update_idletasks()
@@ -193,32 +181,24 @@ def run_inference_camera(model_version_epoch):
         
         # Apply image adjustments based on slider values
         adjusted_frame = apply_image_adjustments(frame)
-        
-        # Run inference on the adjusted frame
         results = model.predict(source=adjusted_frame, save=False, imgsz=640, conf=threshold_value)
-        # print(f"Using threshold value: {threshold_value} for inference")
+        print(f"Using threshold value: {threshold_value} for inference")
 
-        # Display the results
         for r in results:
             # Extract detections and print coordinates
             boxes = r.boxes
-            # if len(boxes) > 0:
-                # print("\n--- Detected Defects ---")
+            if len(boxes) > 0:
+                print("\n--- Detected Defects ---")
                 
             for box in boxes:
                 # Get coordinates (x1, y1, x2, y2 format)
                 x1, y1, x2, y2 = box.xyxy[0].tolist()
-                
-                # Get confidence score
                 confidence = box.conf[0].item()
-                
-                # Get class name
                 cls_id = int(box.cls[0].item())
                 cls_name = model.names[cls_id]
                 
-                ## Print information
-                ## Put 'Class: {cls_name} |' if tere is class name in dataset with which the model have been trained
-                # print(f"Confidence: {confidence:.2f} | Coordinates: ({int(x1)}, {int(y1)}); ({int(x2)}, {int(y1)}); ({int(x2)}, {int(y2)}); ({int(x1)}, {int(y2)}))") # top-left, top-right, bottom-right, bottom-left
+                # Put 'Class: {cls_name} |' if tere is class name in dataset with which the model have been trained
+                print(f"Confidence: {confidence:.2f} | Coordinates: ({int(x1)}, {int(y1)}); ({int(x2)}, {int(y1)}); ({int(x2)}, {int(y2)}); ({int(x1)}, {int(y2)}))") # top-left, top-right, bottom-right, bottom-left
             
             img = r.plot()
             cv2.imshow("Camera Inference", img)
@@ -228,20 +208,20 @@ def run_inference_camera(model_version_epoch):
         histo = live_histogram(adjusted_frame)
         cv2.imshow("Histogram", histo)
         red_mean, red_std, green_mean, green_std, blue_mean, blue_std = extract_red_channel(adjusted_frame)
+
         # Update the dynamic label with mean and std values
         dynamic_red_label.config(text=f"Red Channel - Mean: {red_mean:.2f}, Std: {red_std:.2f}")
         dynamic_green_label.config(text=f"Green Channel - Mean: {green_mean:.2f}, Std: {green_std:.2f}")
         dynamic_blue_label.config(text=f"Blue Channel - Mean: {blue_mean:.2f}, Std: {blue_std:.2f}")
         
-        
         # Break the loop if 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-    # Release the camera and close all OpenCV windows
+    # Release the camera and close all OpenCV windows and destroy the Tkinter window
     cap.release()
     cv2.destroyAllWindows()
-    root.destroy()  # Properly destroy the Tkinter window
+    root.destroy() 
 
 def live_histogram(frame):
     # Calculate the histogram for each channel in the BGR color space
@@ -271,6 +251,7 @@ def extract_red_channel(frame):
     green_channel = frame[:, :, 1]
     blue_channel = frame[:, :, 0]
     
+    # Calculate mean and standard deviation for each channel
     red_mean = np.mean(red_channel)
     red_std = np.std(red_channel)
 
@@ -281,6 +262,8 @@ def extract_red_channel(frame):
     blue_std = np.std(blue_channel)
 
     return red_mean, red_std, green_mean, green_std, blue_mean, blue_std
+#---------------------------------------------------
+
 
 if __name__ == "__main__":
     # Create a dictionary mapping indices to model names
