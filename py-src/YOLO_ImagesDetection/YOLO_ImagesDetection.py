@@ -221,7 +221,9 @@ def run_inference_camera(model_version_epoch):
         cv2.imshow("Adjusted Frame", adjusted_frame)
         histo = live_histogram(adjusted_frame)
         cv2.imshow("Histogram", histo)
-
+        if is_mostly_red(adjusted_frame):
+            print("##################@@@@@@@@@################")
+    
         # Calculate elapsed time for this frame
         elapsed = time.time() - frame_start
         
@@ -239,29 +241,53 @@ def run_inference_camera(model_version_epoch):
     root.destroy()  # Properly destroy the Tkinter window
 
 def live_histogram(frame):
-    # Convert the frame to HSV color space
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    # Calculate the histogram for each channel in the HSV color space
-    hist_h = cv2.calcHist([hsv], [0], None, [256], [0, 256])
-    hist_s = cv2.calcHist([hsv], [1], None, [256], [0, 256])
-    hist_v = cv2.calcHist([hsv], [2], None, [256], [0, 256])
+    # Calculate the histogram for each channel in the BGR color space
+    hist_b = cv2.calcHist([frame], [0], None, [256], [0, 256])  # Blue channel
+    hist_g = cv2.calcHist([frame], [1], None, [256], [0, 256])  # Green channel
+    hist_r = cv2.calcHist([frame], [2], None, [256], [0, 256])  # Red channel
 
-    # Normalize the histograms
-    hist_h = cv2.normalize(hist_h, hist_h, 0, 255, cv2.NORM_MINMAX)
-    hist_s = cv2.normalize(hist_s, hist_s, 0, 255, cv2.NORM_MINMAX)
-    hist_v = cv2.normalize(hist_v, hist_v, 0, 255, cv2.NORM_MINMAX)
+    # Normalize the histograms to fit in the display image
+    hist_b = cv2.normalize(hist_b, hist_b, 0, 255, cv2.NORM_MINMAX)
+    hist_g = cv2.normalize(hist_g, hist_g, 0, 255, cv2.NORM_MINMAX)
+    hist_r = cv2.normalize(hist_r, hist_r, 0, 255, cv2.NORM_MINMAX)
 
     # Create an image to display the histograms
     hist_image = np.zeros((300, 256, 3), dtype=np.uint8)
 
     # Draw the histograms
     for x in range(256):
-        cv2.line(hist_image, (x, 300), (x, 300 - int(hist_h[x])), (255, 0, 0), 1)
-        cv2.line(hist_image, (x, 300), (x, 300 - int(hist_s[x])), (0, 255, 0), 1)
-        cv2.line(hist_image, (x, 300), (x, 300 - int(hist_v[x])), (0, 0, 255), 1)
+        cv2.line(hist_image, (x, 300), (x, 300 - int(hist_b[x])), (255, 0, 0), 1)  # Blue
+        cv2.line(hist_image, (x, 300), (x, 300 - int(hist_g[x])), (0, 255, 0), 1)  # Green
+        cv2.line(hist_image, (x, 300), (x, 300 - int(hist_r[x])), (0, 0, 255), 1)  # Red
 
     return hist_image
 
+def is_mostly_red(frame, threshold=200, red_percentage=50):
+    """
+    Determines if the camera view is mostly red.
+    
+    Args:
+        frame (numpy.ndarray): The input frame in BGR format.
+        threshold (int): The intensity threshold for the red channel (0-255).
+        red_percentage (float): The percentage of red-dominant pixels to classify as "mostly red."
+    
+    Returns:
+        bool: True if the view is mostly red, False otherwise.
+    """
+    # Extract the red channel (channel index 2 in BGR)
+    red_channel = frame[:, :, 2]
+    
+    # Count the number of pixels with red intensity above the threshold
+    red_dominant_pixels = np.sum(red_channel > threshold)
+    
+    # Calculate the total number of pixels
+    total_pixels = frame.shape[0] * frame.shape[1]
+    
+    # Calculate the percentage of red-dominant pixels
+    red_dominance = (red_dominant_pixels / total_pixels) * 100
+    
+    # Check if the red dominance exceeds the specified percentage
+    return red_dominance > red_percentage
 
 if __name__ == "__main__":
     # Create a dictionary mapping indices to model names
