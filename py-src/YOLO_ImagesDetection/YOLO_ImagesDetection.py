@@ -261,9 +261,9 @@ def live_histogram(frame):
 
     # Draw the histograms
     for x in range(256):
-        cv2.line(hist_image, (x, 300), (x, 300 - int(hist_b[x])), (255, 0, 0), 1)  # Blue
-        cv2.line(hist_image, (x, 300), (x, 300 - int(hist_g[x])), (0, 255, 0), 1)  # Green
-        cv2.line(hist_image, (x, 300), (x, 300 - int(hist_r[x])), (0, 0, 255), 1)  # Red
+        cv2.line(hist_image, (x, 300), (x, 300 - int(hist_b[x].item())), (255, 0, 0), 1)  # Blue
+        cv2.line(hist_image, (x, 300), (x, 300 - int(hist_g[x].item())), (0, 255, 0), 1)  # Green
+        cv2.line(hist_image, (x, 300), (x, 300 - int(hist_r[x].item())), (0, 0, 255), 1)  # Red
 
     return hist_image
 
