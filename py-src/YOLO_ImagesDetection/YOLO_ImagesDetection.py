@@ -12,15 +12,19 @@ Cut75 -> overfit
 '''
 
 # Global variables for slider values --------------- 
-brightness_value = 0
-contrast_value = 1
-saturation_value = 0.5
-blur_value = 15
-threshold_value = 0.2
+brightness_value = 0        # Must be between -50 and 50
+contrast_value = 1          # Must be between 0.0 and 3.0
+saturation_value = 0.5      # Must be between 0.0 and 3.0
+blur_value = 25             # Must be odd and between 5 and 25
+threshold_value = 0.2       # Must be between 0.0 and 1.0
+
+saturation_slider = None    # Global variable for the saturation slider
 #---------------------------------------------------
 
 # UI for camera settings ---------------------------
 def create_control_panel(version):
+    global saturation_slider
+
     def _reset_values():
         brightness_slider.set(1)
         contrast_slider.set(10)
@@ -95,8 +99,11 @@ def create_control_panel(version):
     dynamic_blue_label = tk.Label(root, text="Dynamic Text Here", font=("Helvetica", 12))
     dynamic_blue_label.pack(pady=10)
 
+    dynamic_brightness = tk.Label(root, text="Dynamic Text Here", font=("Helvetica", 12))
+    dynamic_brightness.pack(pady=10)
 
-    return root, dynamic_red_label, dynamic_green_label, dynamic_blue_label
+
+    return root, dynamic_red_label, dynamic_green_label, dynamic_blue_label, dynamic_brightness
 
 def on_threshold_change(val):
     global threshold_value
@@ -114,6 +121,11 @@ def on_contrast_change(val):
 def on_saturation_change(val):
     global saturation_value
     saturation_value = int(val) / 10.0  # Range 0.0 to 3.0
+
+def update_saturation_slider():
+    global saturation_slider, saturation_value
+    if saturation_slider:
+        saturation_slider.set(int(saturation_value * 10))
 
 def on_blur_change(val):
     global blur_value
@@ -149,7 +161,7 @@ def run_inference_camera(model_version_epoch):
     model = YOLO(model_path, task='detect')
 
     # Create control panel with sliders and get the root window and dynamic label
-    root, dynamic_red_label, dynamic_green_label, dynamic_blue_label = create_control_panel(model_version_epoch)
+    root, dynamic_red_label, dynamic_green_label, dynamic_blue_label, dynamic_brightness = create_control_panel(model_version_epoch)
 
     # Open the camera (0 is usually the default camera)
     cap = cv2.VideoCapture(0)
@@ -187,12 +199,23 @@ def run_inference_camera(model_version_epoch):
         histo = live_histogram(adjusted_frame)
         cv2.imshow("Histogram", histo)
         red_mean, red_std, green_mean, green_std, blue_mean, blue_std = extract_red_channel(adjusted_frame)
+        brightness = get_brightness(adjusted_frame)
 
         # Update the dynamic label with mean and std values
         dynamic_red_label.config(text=f"Red Channel - Mean: {red_mean:.2f}, Std: {red_std:.2f}")
         dynamic_green_label.config(text=f"Green Channel - Mean: {green_mean:.2f}, Std: {green_std:.2f}")
         dynamic_blue_label.config(text=f"Blue Channel - Mean: {blue_mean:.2f}, Std: {blue_std:.2f}")
-        
+        dynamic_brightness.config(text=f"Brightness: {brightness:.2f}")
+
+        # Adjust saturation if brightness is below 110
+        if brightness < 110:
+            global saturation_value
+            saturation_value = 1.2
+            update_saturation_slider()
+        else :
+            saturation_value = 0.5
+            update_saturation_slider()
+
         results = model.predict(source=adjusted_frame, save=False, imgsz=640, conf=threshold_value)
         for r in results:
             # Extract detections and print coordinates
@@ -261,6 +284,11 @@ def extract_red_channel(frame):
     blue_std = np.std(blue_channel)
 
     return red_mean, red_std, green_mean, green_std, blue_mean, blue_std
+
+def get_brightness(image):
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    brightness = hsv[:, :, 2].mean()  # V channel
+    return brightness
 #---------------------------------------------------
 
 
