@@ -174,11 +174,12 @@ def run_inference_camera(model_version_epoch):
     cv2.namedWindow("Camera Inference", cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Camera Inference", cv2.WND_PROP_TOPMOST, 1)
     
-    cv2.namedWindow("Adjusted Frame", cv2.WINDOW_NORMAL)
-    cv2.setWindowProperty("Adjusted Frame", cv2.WND_PROP_TOPMOST, 1)
-    
     cv2.namedWindow("Histogram", cv2.WINDOW_NORMAL)
     cv2.setWindowProperty("Histogram", cv2.WND_PROP_TOPMOST, 1)
+
+    cv2.namedWindow("dfx", cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty("dfx", cv2.WND_PROP_TOPMOST, 1)
+    cv2.resizeWindow("dfx", 640, 480)
     
     # Process frames in a loop
     while True:
@@ -193,11 +194,11 @@ def run_inference_camera(model_version_epoch):
         
         # Apply image adjustments based on slider values
         adjusted_frame = apply_image_adjustments(frame)
-        cv2.imshow("Adjusted Frame", adjusted_frame)
 
         # Calculte and display the histogram
         histo = live_histogram(adjusted_frame)
         cv2.imshow("Histogram", histo)
+
         red_mean, red_std, green_mean, green_std, blue_mean, blue_std = extract_red_channel(adjusted_frame)
         brightness = get_brightness(adjusted_frame)
 
@@ -231,11 +232,24 @@ def run_inference_camera(model_version_epoch):
                 cls_name = model.names[cls_id]
                 
                 # Put 'Class: {cls_name} |' if tere is class name in dataset with which the model have been trained
-                print(f"Confidence: {confidence:.2f} | Coordinates: ({int(x1)}, {int(y1)}); ({int(x2)}, {int(y1)}); ({int(x2)}, {int(y2)}); ({int(x1)}, {int(y2)}))") # top-left, top-right, bottom-right, bottom-left
-            
+                # print(f"Confidence: {confidence:.2f} | Coordinates: ({int(x1)}, {int(y1)}); ({int(x2)}, {int(y1)}); ({int(x2)}, {int(y2)}); ({int(x1)}, {int(y2)}))") # top-left, top-right, bottom-right, bottom-left
             img = r.plot()
             cv2.imshow("Camera Inference", img)
-        
+
+
+            # Create a binary frame with detected defects
+            binary_frame = np.zeros_like(frame, dtype=np.uint8)
+
+            for box in boxes:
+                # Get coordinates (x1, y1, x2, y2 format)
+                x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+                # Draw a white rectangle on the binary frame
+                cv2.rectangle(binary_frame, (x1, y1), (x2, y2), (255, 255, 255), -1)
+
+            # Display the binary frame in the "dfx" window
+            cv2.imshow("dfx", binary_frame)
+
+
         # Break the loop if 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -303,6 +317,7 @@ if __name__ == "__main__":
         "6": "newSmall25_v8",
         "7": "newSmall25_v11", ## Good one
         "8": "newSmall50_v11",
+        "9": "newSmall25_v10", ## Also Good one
     }
     
     print("Choose the model you want to use:")
