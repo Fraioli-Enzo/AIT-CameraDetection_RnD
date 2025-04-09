@@ -154,6 +154,14 @@ def apply_image_adjustments(frame):
     return adjusted
 
 def save_binary_frame_to_dxf(binary_frame, boxes, output_path="output.dxf"):
+    def is_close_to_existing(new_rect, existing_rects, threshold=20):
+        for rect in existing_rects:
+            # Compare each corner of the new rectangle with the existing rectangle
+            for (x1, y1), (x2, y2) in zip(new_rect, rect):
+                if abs(x1 - x2) <= threshold and abs(y1 - y2) <= threshold:
+                    return True
+        return False
+
     # Load or create a new DXF document
     if os.path.exists(output_path):
         doc = ezdxf.readfile(output_path)
@@ -163,6 +171,7 @@ def save_binary_frame_to_dxf(binary_frame, boxes, output_path="output.dxf"):
         print(f"Created new DXF file: {output_path}")
     
     msp = doc.modelspace()
+
     # Extract existing rectangles from the DXF file
     existing_rectangles = set()
     for entity in msp.query("LWPOLYLINE"):
@@ -170,22 +179,31 @@ def save_binary_frame_to_dxf(binary_frame, boxes, output_path="output.dxf"):
             points = tuple((int(p[0]), int(p[1])) for p in entity.get_points())
             existing_rectangles.add(points)
 
-    # Get the width and height of the binary frame for mirroring
-    frame_width = binary_frame.shape[1]
-    frame_height = binary_frame.shape[0]
+    # Get the width and height of the binary frame
+    frame_height, frame_width = binary_frame.shape[:2]
 
-    # Add new rectangles if they are not already in the DXF file
+    # Add a rectangle representing the contours of the entire image
+    image_contour = ((0, 0), (frame_width, 0), (frame_width, frame_height), (0, frame_height))
+    if image_contour not in existing_rectangles:
+        contour = msp.add_lwpolyline(image_contour, close=True)
+        contour.rgb = (255, 0, 0)
+        print(f"Added image contour: {image_contour}")
+    else:
+        print(f"Image contour already exists: {image_contour}")
+
+    # Add new rectangles if they are not already in the DXF file and not too close to existing ones
     for box in boxes:
         x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-        y1, y2 = frame_width - y2, frame_width - y1  # Flip horizontally
+        y1, y2 = frame_height - y2, frame_height - y1  # Flip vertically
 
         new_rectangle = ((x1, y1), (x2, y1), (x2, y2), (x1, y2))
         
-        if new_rectangle not in existing_rectangles:
+        if new_rectangle not in existing_rectangles and not is_close_to_existing(new_rectangle, existing_rectangles):
             msp.add_lwpolyline(new_rectangle, close=True)
+            existing_rectangles.add(new_rectangle)  # Add to the set of existing rectangles
             print(f"Added new rectangle: {new_rectangle}")
         else:
-            print(f"Rectangle already exists: {new_rectangle}")
+            print(f"Skipped rectangle (too close or already exists): {new_rectangle}")
 
     # Save the updated DXF file
     doc.saveas(output_path)
@@ -194,6 +212,10 @@ def save_binary_frame_to_dxf(binary_frame, boxes, output_path="output.dxf"):
 
 # Process camera frames and run inference ----------
 def run_inference_camera(model_version_epoch):
+    output_path = "D:/Enzo/CameraDetection/py-src/YOLO_ImagesDetection/dfx/detected_defects.dxf"
+    if os.path.exists(output_path):
+        os.remove(output_path)
+        print(f"Removed existing DXF file: {output_path}")
     # Get the script's directory & Build the path to the model
     base_path = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(base_path, f"best{model_version_epoch}.torchscript")
@@ -292,7 +314,7 @@ def run_inference_camera(model_version_epoch):
             cv2.imshow("dfx", binary_frame)
 
             # Save the binary frame to a DXF file
-            save_binary_frame_to_dxf(binary_frame, boxes, output_path="D:/Enzo/CameraDetection/py-src/YOLO_ImagesDetection/dfx/detected_defects.dxf")
+            save_binary_frame_to_dxf(binary_frame, boxes, output_path)
 
         # Break the loop if 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
