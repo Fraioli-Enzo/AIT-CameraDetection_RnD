@@ -219,11 +219,12 @@ def save_binary_frame_to_dxf(binary_frame, boxes, output_path="output.dxf"):
 #---------------------------------------------------
 
 # Process camera frames and run inference ----------
-def run_inference_camera(model_version_epoch):
+def run_inference_camera(model_version_epoch, video_path=None):
     output_path = "D:/Enzo/CameraDetection/py-src/YOLO_ImagesDetection/dfx/detected_defects.dxf"
     if os.path.exists(output_path):
         os.remove(output_path)
         print(f"Removed existing DXF file: {output_path}")
+    
     # Get the script's directory & Build the path to the model
     base_path = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(base_path, f"best{model_version_epoch}.torchscript")
@@ -232,12 +233,19 @@ def run_inference_camera(model_version_epoch):
     # Create control panel with sliders and get the root window and dynamic label
     root, dynamic_red_label, dynamic_green_label, dynamic_blue_label, dynamic_brightness = create_control_panel(model_version_epoch)
 
-    # Open the camera (0 is usually the default camera)
-    cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
-        print("Error: Could not open the camera.")
-        return
-    print("Press 'q' to quit.")
+    # Open the video file or camera
+    if video_path:
+        cap = cv2.VideoCapture(video_path)  # Use the provided video file
+        if not cap.isOpened():
+            print(f"Error: Could not open video file: {video_path}")
+            return
+        print(f"Processing video file: {video_path}")
+    else:
+        cap = cv2.VideoCapture(0)  # Default to camera feed
+        if not cap.isOpened():
+            print("Error: Could not open the camera.")
+            return
+        print("Processing camera feed. Press 'q' to quit.")
 
     # Create named windows and set them to stay on top of other windows
     cv2.namedWindow("Camera Inference", cv2.WINDOW_NORMAL)
@@ -257,16 +265,14 @@ def run_inference_camera(model_version_epoch):
         root.update()
         
         ret, frame = cap.read()
-        frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
-        frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
         if not ret:
-            print("Error: Could not read frame from the camera.")
+            print("End of video or error reading frame.")
             break
-    
+
         # Apply image adjustments based on slider values
         adjusted_frame = apply_image_adjustments(frame)
 
-        # Calculte and display the histogram
+        # Calculate and display the histogram
         histo = live_histogram(adjusted_frame)
         cv2.imshow("Histogram", histo)
 
@@ -284,7 +290,7 @@ def run_inference_camera(model_version_epoch):
             global saturation_value
             saturation_value = 1.2
             update_saturation_slider()
-        else :
+        else:
             saturation_value = 0.5
             update_saturation_slider()
 
@@ -302,12 +308,9 @@ def run_inference_camera(model_version_epoch):
                 cls_id = int(box.cls[0].item())
                 cls_name = model.names[cls_id]
                 
-                # Put 'Class: {cls_name} |' if tere is class name in dataset with which the model have been trained
-                # print(f"Confidence: {confidence:.2f} | Coordinates: ({int(x1)}, {int(y1)}); ({int(x2)}, {int(y1)}); ({int(x2)}, {int(y2)}); ({int(x1)}, {int(y2)}))") # top-left, top-right, bottom-right, bottom-left
             img = r.plot()
             # Display the mirrored image
             cv2.imshow("Camera Inference", img)
-
 
             # Create a binary frame with detected defects
             binary_frame = np.zeros_like(frame, dtype=np.uint8)
@@ -328,10 +331,10 @@ def run_inference_camera(model_version_epoch):
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-    # Release the camera and close all OpenCV windows and destroy the Tkinter window
+    # Release the video/camera and close all OpenCV windows and destroy the Tkinter window
     cap.release()
     cv2.destroyAllWindows()
-    root.destroy() 
+    root.destroy()
 
 def live_histogram(frame):
     # Calculate the histogram for each channel in the BGR color space
@@ -410,4 +413,4 @@ if __name__ == "__main__":
     # Set the model_version_epoch based on the selected index
     model_version_epoch = models[model_index]
     print(f"Selected model: {model_version_epoch}")
-    run_inference_camera(model_version_epoch)
+    run_inference_camera(model_version_epoch, video_path='D:/Enzo/CameraDetection/py-src/YOLO_ImagesDetection/video.mp4')
