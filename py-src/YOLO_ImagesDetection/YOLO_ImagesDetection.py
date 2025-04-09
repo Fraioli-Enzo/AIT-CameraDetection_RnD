@@ -216,6 +216,70 @@ def save_binary_frame_to_dxf(binary_frame, boxes, output_path="output.dxf"):
     # Save the updated DXF file
     doc.saveas(output_path)
     print(f"DXF file updated and saved to: {output_path}")
+
+def detect_fabric_start_end(video_path):
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"Error: Could not open video file: {video_path}")
+        return
+
+    # Initialize background subtractor
+    back_sub = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=50, detectShadows=False)
+
+    fabric_start_frame = None
+    fabric_end_frame = None
+    frame_count = 0
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("End of video or error reading frame.")
+            break
+
+        frame_count += 1
+
+        # Apply background subtraction
+        fg_mask = back_sub.apply(frame)
+
+        # Threshold the mask to remove noise
+        _, binary_mask = cv2.threshold(fg_mask, 200, 255, cv2.THRESH_BINARY)
+
+        # Find contours in the binary mask
+        contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Check if any contour is large enough to be considered fabric
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > 5000:  # Adjust this threshold based on your fabric size
+                x, y, w, h = cv2.boundingRect(contour)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+                # Record the start frame
+                if fabric_start_frame is None:
+                    fabric_start_frame = frame_count
+
+                # Update the end frame
+                fabric_end_frame = frame_count
+
+        # Display the frame with detected fabric
+        cv2.imshow("Fabric Detection", frame)
+
+        # Break the loop if 'q' is pressed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
+    cv2.destroyAllWindows()
+
+    # Print the results
+    if fabric_start_frame is not None and fabric_end_frame is not None:
+        start_time = fabric_start_frame / fps
+        end_time = fabric_end_frame / fps
+        print(f"Fabric starts at: {start_time:.2f} seconds")
+        print(f"Fabric ends at: {end_time:.2f} seconds")
+    else:
+        print("No fabric detected in the video.")
 #---------------------------------------------------
 
 # Process camera frames and run inference ----------
@@ -413,4 +477,5 @@ if __name__ == "__main__":
     # Set the model_version_epoch based on the selected index
     model_version_epoch = models[model_index]
     print(f"Selected model: {model_version_epoch}")
-    run_inference_camera(model_version_epoch, video_path='D:/Enzo/CameraDetection/py-src/YOLO_ImagesDetection/video.mp4')
+    detect_fabric_start_end('D:/Enzo/CameraDetection/py-src/YOLO_ImagesDetection/video.mp4')
+    # run_inference_camera(model_version_epoch, video_path='D:/Enzo/CameraDetection/py-src/YOLO_ImagesDetection/video.mp4')
