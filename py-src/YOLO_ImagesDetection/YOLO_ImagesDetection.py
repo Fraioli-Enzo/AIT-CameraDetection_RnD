@@ -5,6 +5,8 @@ import numpy as np
 import tkinter as tk
 import pyautogui
 import ezdxf
+from ezdxf.enums import TextEntityAlignment
+import random
 
 '''
 Cut100 -> overfit 
@@ -199,7 +201,13 @@ def save_binary_frame_to_dxf(binary_frame, boxes, output_path="output.dxf"):
         new_rectangle = ((x1, y1), (x2, y1), (x2, y2), (x1, y2))
         
         if new_rectangle not in existing_rectangles and not is_close_to_existing(new_rectangle, existing_rectangles):
-            msp.add_lwpolyline(new_rectangle, close=True)
+            defect = msp.add_lwpolyline(new_rectangle, close=True)
+            defect_text = msp.add_text(f"Defect", height=5).set_placement(new_rectangle[0], align=TextEntityAlignment.BOTTOM_LEFT)
+            red = random.randint(0, 255)
+            green = random.randint(0, 255)
+            blue = random.randint(0, 255)
+            defect.rgb = (red, green, blue)  # Set random color for the defect rectangle
+            defect_text.rgb = (red, green, blue)  # Set the same color for the text
             existing_rectangles.add(new_rectangle)  # Add to the set of existing rectangles
             print(f"Added new rectangle: {new_rectangle}")
         else:
@@ -391,8 +399,9 @@ if __name__ == "__main__":
         print(f"{idx}. {model}")
     
     # Get user input with default value
-    model_index = input("Enter the model index (default is 7): ").strip()
-    
+    # model_index = input("Enter the model index (default is 7): ").strip()
+    model_index = "9"  # Default value for testing
+
     # Use default if input is empty or invalid
     if not model_index or model_index not in models:
         model_index = "7"
