@@ -4,6 +4,7 @@ import os
 import numpy as np
 import tkinter as tk
 import pyautogui
+import ezdxf
 
 '''
 Cut100 -> overfit 
@@ -149,8 +150,46 @@ def apply_image_adjustments(frame):
     # Apply Gaussian blur
     if blur_value > 0:
         adjusted = cv2.GaussianBlur(adjusted, (blur_value, blur_value), 0)
-    
+
     return adjusted
+
+def save_binary_frame_to_dxf(binary_frame, boxes, output_path="output.dxf"):
+    # Load or create a new DXF document
+    if os.path.exists(output_path):
+        doc = ezdxf.readfile(output_path)
+        print(f"Loaded existing DXF file: {output_path}")
+    else:
+        doc = ezdxf.new()
+        print(f"Created new DXF file: {output_path}")
+    
+    msp = doc.modelspace()
+    # Extract existing rectangles from the DXF file
+    existing_rectangles = set()
+    for entity in msp.query("LWPOLYLINE"):
+        if entity.is_closed:  # Only consider closed polylines (rectangles)
+            points = tuple((int(p[0]), int(p[1])) for p in entity.get_points())
+            existing_rectangles.add(points)
+
+    # Get the width and height of the binary frame for mirroring
+    frame_width = binary_frame.shape[1]
+    frame_height = binary_frame.shape[0]
+
+    # Add new rectangles if they are not already in the DXF file
+    for box in boxes:
+        x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+        y1, y2 = frame_width - y2, frame_width - y1  # Flip horizontally
+
+        new_rectangle = ((x1, y1), (x2, y1), (x2, y2), (x1, y2))
+        
+        if new_rectangle not in existing_rectangles:
+            msp.add_lwpolyline(new_rectangle, close=True)
+            print(f"Added new rectangle: {new_rectangle}")
+        else:
+            print(f"Rectangle already exists: {new_rectangle}")
+
+    # Save the updated DXF file
+    doc.saveas(output_path)
+    print(f"DXF file updated and saved to: {output_path}")
 #---------------------------------------------------
 
 # Process camera frames and run inference ----------
@@ -188,10 +227,12 @@ def run_inference_camera(model_version_epoch):
         root.update()
         
         ret, frame = cap.read()
+        frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+        frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
         if not ret:
             print("Error: Could not read frame from the camera.")
             break
-        
+    
         # Apply image adjustments based on slider values
         adjusted_frame = apply_image_adjustments(frame)
 
@@ -234,6 +275,7 @@ def run_inference_camera(model_version_epoch):
                 # Put 'Class: {cls_name} |' if tere is class name in dataset with which the model have been trained
                 # print(f"Confidence: {confidence:.2f} | Coordinates: ({int(x1)}, {int(y1)}); ({int(x2)}, {int(y1)}); ({int(x2)}, {int(y2)}); ({int(x1)}, {int(y2)}))") # top-left, top-right, bottom-right, bottom-left
             img = r.plot()
+            # Display the mirrored image
             cv2.imshow("Camera Inference", img)
 
 
@@ -249,6 +291,8 @@ def run_inference_camera(model_version_epoch):
             # Display the binary frame in the "dfx" window
             cv2.imshow("dfx", binary_frame)
 
+            # Save the binary frame to a DXF file
+            save_binary_frame_to_dxf(binary_frame, boxes, output_path="D:/Enzo/CameraDetection/py-src/YOLO_ImagesDetection/dfx/detected_defects.dxf")
 
         # Break the loop if 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
