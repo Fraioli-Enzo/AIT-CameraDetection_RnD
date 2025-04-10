@@ -37,7 +37,8 @@ def create_control_panel(version):
     
     def _screenshot():
         # Define the folder path where the screenshot will be saved
-        folder_path = "D:/Enzo/CameraDetection/py-src/YOLO_ImagesDetection/screenshots"
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        folder_path = os.path.join(base_path, "screenshots")
         
         # Ensure the folder exists
         os.makedirs(folder_path, exist_ok=True)
@@ -424,6 +425,37 @@ def detect_fabric_start_end(video_path):
         speed_text = f"Playback Delay: {frame_delay}ms"
         cv2.putText(foreground, speed_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 
                     0.7, (0, 255, 0), 2, cv2.LINE_AA)
+        
+        # Use the chosen model to detect defects on the fabric
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        model_path = os.path.join(base_path, f"best{model_version_epoch}.torchscript")
+        model = YOLO(model_path, task='detect')
+
+        # Run detection on the foreground
+        # First ensure we're only processing fabric regions by using the foreground mask
+        fabric_only = cv2.bitwise_and(frame, frame, mask=foreground_mask)
+        
+        # Run detection only on the fabric areas
+        results = model.predict(source=fabric_only, save=False, imgsz=640, conf=threshold_value)
+        for r in results:
+            # Extract detections and display
+            boxes = r.boxes
+            if len(boxes) > 0:
+                print(f"Detected {len(boxes)} defects in current frame")
+                
+                # Draw the detections on the foreground image
+                foreground = r.plot()
+                
+                # Display defect information
+                for box in boxes:
+                    x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+                    confidence = box.conf[0].item()
+                    cls_id = int(box.cls[0].item())
+                    cls_name = model.names[cls_id]
+                    
+                    cv2.putText(foreground, f"{cls_name}: {confidence:.2f}", 
+                               (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 
+                               0.5, (0, 255, 0), 1, cv2.LINE_AA)
 
         # Display the masked result in a separate window
         cv2.imshow("Foreground", foreground)
@@ -437,12 +469,13 @@ def detect_fabric_start_end(video_path):
         
     cap.release()
     cv2.destroyAllWindows()
-
-
 #---------------------------------------------------
 
 
 if __name__ == "__main__":
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    video_path = os.path.join(base_path, "video2.mp4")
+
     # Create a dictionary mapping indices to model names
     models = {
         "1": "Small25_v8",
@@ -472,5 +505,5 @@ if __name__ == "__main__":
     # Set the model_version_epoch based on the selected index
     model_version_epoch = models[model_index]
     print(f"Selected model: {model_version_epoch}")
-    # detect_fabric_start_end('D:/Enzo/CameraDetection/py-src/YOLO_ImagesDetection/video2.mp4')
-    run_inference_camera(model_version_epoch, video_path='D:/Enzo/CameraDetection/py-src/YOLO_ImagesDetection/video2.mp4')
+    detect_fabric_start_end(video_path)
+    # run_inference_camera(model_version_epoch, video_path=video_path)
