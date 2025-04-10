@@ -398,10 +398,10 @@ def detect_fabric_start_end(video_path):
             print("End of video or error reading frame.")
             break
 
-        # Get video width and height
+        # Put a line in the middle
         video_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         video_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        cv2.line(frame, (int(video_width / 2), 0), (int(video_width / 2), video_height), (0, 255, 0), 3)
+        cv2.line(frame, (int(video_width / 2), 0), (int(video_width / 2), video_height), (0, 0, 255), 3)
 
         # Apply simple background removal using grayscale thresholding
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -409,66 +409,59 @@ def detect_fabric_start_end(video_path):
 
         # Find contours in the binary mask
         contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cv2.drawContours(frame, contours, -1, (0, 0, 255), 2)
 
         # Create a mask for the foreground
         foreground_mask = np.zeros_like(binary_mask)
         for contour in contours:
             # Only keep larger contours (adjust area threshold as needed)
-            if cv2.contourArea(contour) > 1000:
+            if cv2.contourArea(contour) > 150000:
                 cv2.drawContours(foreground_mask, [contour], 0, 255, -1)
+        
+        # Always ensure the middle vertical line is visible in the mask
+        cv2.line(foreground_mask, (int(video_width / 2), 0), (int(video_width / 2), video_height), 255, 3)
 
         # Apply the mask to the original frame to extract foreground
         foreground = cv2.bitwise_and(frame, frame, mask=foreground_mask)
         
-        # Display current playback speed information
-        speed_text = f"Playback Delay: {frame_delay}ms"
-        cv2.putText(foreground, speed_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 
-                    0.7, (0, 255, 0), 2, cv2.LINE_AA)
+        # # Use the chosen model to detect defects on the fabric
+        # base_path = os.path.dirname(os.path.abspath(__file__))
+        # model_path = os.path.join(base_path, f"best{model_version_epoch}.torchscript")
+        # model = YOLO(model_path, task='detect')
         
-        # Use the chosen model to detect defects on the fabric
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(base_path, f"best{model_version_epoch}.torchscript")
-        model = YOLO(model_path, task='detect')
-
-        # Run detection on the foreground
-        # First ensure we're only processing fabric regions by using the foreground mask
-        fabric_only = cv2.bitwise_and(frame, frame, mask=foreground_mask)
-        
-        # Run detection only on the fabric areas
-        results = model.predict(source=fabric_only, save=False, imgsz=640, conf=threshold_value)
-        for r in results:
-            # Extract detections and display
-            boxes = r.boxes
-            if len(boxes) > 0:
-                print(f"Detected {len(boxes)} defects in current frame")
+        # # Run detection only on the fabric areas
+        # results = model.predict(source=foreground, save=False, imgsz=640, conf=threshold_value)
+        # for r in results:
+        #     # Extract detections and display
+        #     boxes = r.boxes
+        #     if len(boxes) > 0:
+        #         print(f"Detected {len(boxes)} defects in current frame")
                 
-                # Draw the detections on the foreground image
-                foreground = r.plot()
+        #         # Draw the detections on the foreground image
+        #         foreground = r.plot()
                 
-                # Display defect information
-                for box in boxes:
-                    x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-                    confidence = box.conf[0].item()
-                    cls_id = int(box.cls[0].item())
-                    cls_name = model.names[cls_id]
+        #         # Display defect information
+        #         for box in boxes:
+        #             x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+        #             confidence = box.conf[0].item()
+        #             cls_id = int(box.cls[0].item())
+        #             cls_name = model.names[cls_id]
                     
-                    cv2.putText(foreground, f"{cls_name}: {confidence:.2f}", 
-                               (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 
-                               0.5, (0, 255, 0), 1, cv2.LINE_AA)
+        #             cv2.putText(foreground, f"{cls_name}: {confidence:.2f}", 
+        #                        (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 
+        #                        0.5, (0, 255, 0), 1, cv2.LINE_AA)
 
         # Display the masked result in a separate window
         cv2.imshow("Foreground", foreground)
 
         # Wait for the specified delay and check for key presses
         key = cv2.waitKey(frame_delay) & 0xFF
-        
-        # Handle key presses for speed control
         if key == ord('q'):  # Quit
             break
         
     cap.release()
     cv2.destroyAllWindows()
+
+    return None  
 #---------------------------------------------------
 
 

@@ -1,13 +1,16 @@
 # Fabric Defect Detection Using Computer Vision
 
-This project utilizes a deep learning model for detecting fabric defects. Follow the steps below to get started:
+This repository contains all the research and development related to a computer vision project focused on detecting defects in various types of fabrics.
 
-## How to Use
-1. Open `py-src` folder
-2. Navigate to the `YOLO_ImagesDetection` folder.
-3. Ensure a camera is connected to your system.
-4. Run the program. If all required libraries are installed, no additional setup is needed.
+To better understand the structure of this repository, here are a few explanations:
 
-## Notes
-- The other programs in this repository were developed as part of Research and Development efforts.
-- Ensure all dependencies are installed before running the program.
+1. The `Images` folder contains the dataset used to train YOLO deep learning models.
+2. The `py-src` folder includes many Python scripts that were used to test different approaches within this project.  
+   The most important ones are:
+   - `YOLO`: used to train YOLO models.
+   - `YOLO_ImagesDetection`: used to analyze video or camera streams.
+3. In the `YOLO_ImagesDetection` folder, the file `YOLO_ImagesDetection.py` is responsible for several tasks such as:
+   - Detecting defects
+   - Identifying the start and end points of fabric on a conveyor belt
+
+For a more user-friendly experience, please refer to the `ComputerVision` repository.
