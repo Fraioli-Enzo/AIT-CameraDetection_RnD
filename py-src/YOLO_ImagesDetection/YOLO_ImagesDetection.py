@@ -154,132 +154,6 @@ def apply_image_adjustments(frame):
         adjusted = cv2.GaussianBlur(adjusted, (blur_value, blur_value), 0)
 
     return adjusted
-
-def save_binary_frame_to_dxf(binary_frame, boxes, output_path="output.dxf"):
-    def is_close_to_existing(new_rect, existing_rects, threshold=20):
-        for rect in existing_rects:
-            # Compare each corner of the new rectangle with the existing rectangle
-            for (x1, y1), (x2, y2) in zip(new_rect, rect):
-                if abs(x1 - x2) <= threshold and abs(y1 - y2) <= threshold:
-                    return True
-        return False
-
-    # Load or create a new DXF document
-    if os.path.exists(output_path):
-        doc = ezdxf.readfile(output_path)
-        print(f"Loaded existing DXF file: {output_path}")
-    else:
-        doc = ezdxf.new()
-        print(f"Created new DXF file: {output_path}")
-    
-    msp = doc.modelspace()
-
-    # Extract existing rectangles from the DXF file
-    existing_rectangles = set()
-    for entity in msp.query("LWPOLYLINE"):
-        if entity.is_closed:  # Only consider closed polylines (rectangles)
-            points = tuple((int(p[0]), int(p[1])) for p in entity.get_points())
-            existing_rectangles.add(points)
-
-    # Get the width and height of the binary frame
-    frame_height, frame_width = binary_frame.shape[:2]
-
-    # Add a rectangle representing the contours of the entire image
-    image_contour = ((0, 0), (frame_width, 0), (frame_width, frame_height), (0, frame_height))
-    if image_contour not in existing_rectangles:
-        contour = msp.add_lwpolyline(image_contour, close=True)
-        contour.rgb = (255, 0, 0)
-        print(f"Added image contour: {image_contour}")
-    else:
-        print(f"Image contour already exists: {image_contour}")
-
-    # Add new rectangles if they are not already in the DXF file and not too close to existing ones
-    for box in boxes:
-        x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-        y1, y2 = frame_height - y2, frame_height - y1  # Flip vertically
-
-        new_rectangle = ((x1, y1), (x2, y1), (x2, y2), (x1, y2))
-        
-        if new_rectangle not in existing_rectangles and not is_close_to_existing(new_rectangle, existing_rectangles):
-            defect = msp.add_lwpolyline(new_rectangle, close=True)
-            defect_text = msp.add_text(f"Defect", height=5).set_placement(new_rectangle[0], align=TextEntityAlignment.BOTTOM_LEFT)
-            red = random.randint(0, 255)
-            green = random.randint(0, 255)
-            blue = random.randint(0, 255)
-            defect.rgb = (red, green, blue)  # Set random color for the defect rectangle
-            defect_text.rgb = (red, green, blue)  # Set the same color for the text
-            existing_rectangles.add(new_rectangle)  # Add to the set of existing rectangles
-            print(f"Added new rectangle: {new_rectangle}")
-        else:
-            print(f"Skipped rectangle (too close or already exists): {new_rectangle}")
-
-    # Save the updated DXF file
-    doc.saveas(output_path)
-    print(f"DXF file updated and saved to: {output_path}")
-
-def detect_fabric_start_end(video_path):
-    cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        print(f"Error: Could not open video file: {video_path}")
-        return
-
-    # Initialize background subtractor
-    back_sub = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=50, detectShadows=False)
-
-    fabric_start_frame = None
-    fabric_end_frame = None
-    frame_count = 0
-
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            print("End of video or error reading frame.")
-            break
-
-        frame_count += 1
-
-        # Apply background subtraction
-        fg_mask = back_sub.apply(frame)
-
-        # Threshold the mask to remove noise
-        _, binary_mask = cv2.threshold(fg_mask, 200, 255, cv2.THRESH_BINARY)
-
-        # Find contours in the binary mask
-        contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        # Check if any contour is large enough to be considered fabric
-        for contour in contours:
-            area = cv2.contourArea(contour)
-            if area > 5000:  # Adjust this threshold based on your fabric size
-                x, y, w, h = cv2.boundingRect(contour)
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-                # Record the start frame
-                if fabric_start_frame is None:
-                    fabric_start_frame = frame_count
-
-                # Update the end frame
-                fabric_end_frame = frame_count
-
-        # Display the frame with detected fabric
-        cv2.imshow("Fabric Detection", frame)
-
-        # Break the loop if 'q' is pressed
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-        
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    cap.release()
-    cv2.destroyAllWindows()
-
-    # Print the results
-    if fabric_start_frame is not None and fabric_end_frame is not None:
-        start_time = fabric_start_frame / fps
-        end_time = fabric_end_frame / fps
-        print(f"Fabric starts at: {start_time:.2f} seconds")
-        print(f"Fabric ends at: {end_time:.2f} seconds")
-    else:
-        print("No fabric detected in the video.")
 #---------------------------------------------------
 
 # Process camera frames and run inference ----------
@@ -444,6 +318,139 @@ def get_brightness(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     brightness = hsv[:, :, 2].mean()  # V channel
     return brightness
+
+def save_binary_frame_to_dxf(binary_frame, boxes, output_path="output.dxf"):
+    def is_close_to_existing(new_rect, existing_rects, threshold=20):
+        for rect in existing_rects:
+            # Compare each corner of the new rectangle with the existing rectangle
+            for (x1, y1), (x2, y2) in zip(new_rect, rect):
+                if abs(x1 - x2) <= threshold and abs(y1 - y2) <= threshold:
+                    return True
+        return False
+
+    # Load or create a new DXF document
+    if os.path.exists(output_path):
+        doc = ezdxf.readfile(output_path)
+        print(f"Loaded existing DXF file: {output_path}")
+    else:
+        doc = ezdxf.new()
+        print(f"Created new DXF file: {output_path}")
+    
+    msp = doc.modelspace()
+
+    # Extract existing rectangles from the DXF file
+    existing_rectangles = set()
+    for entity in msp.query("LWPOLYLINE"):
+        if entity.is_closed:  # Only consider closed polylines (rectangles)
+            points = tuple((int(p[0]), int(p[1])) for p in entity.get_points())
+            existing_rectangles.add(points)
+
+    # Get the width and height of the binary frame
+    frame_height, frame_width = binary_frame.shape[:2]
+
+    # Add a rectangle representing the contours of the entire image
+    image_contour = ((0, 0), (frame_width, 0), (frame_width, frame_height), (0, frame_height))
+    if image_contour not in existing_rectangles:
+        contour = msp.add_lwpolyline(image_contour, close=True)
+        contour.rgb = (255, 0, 0)
+        print(f"Added image contour: {image_contour}")
+    else:
+        print(f"Image contour already exists: {image_contour}")
+
+    # Add new rectangles if they are not already in the DXF file and not too close to existing ones
+    for box in boxes:
+        x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+        y1, y2 = frame_height - y2, frame_height - y1  # Flip vertically
+
+        new_rectangle = ((x1, y1), (x2, y1), (x2, y2), (x1, y2))
+        
+        if new_rectangle not in existing_rectangles and not is_close_to_existing(new_rectangle, existing_rectangles):
+            defect = msp.add_lwpolyline(new_rectangle, close=True)
+            defect_text = msp.add_text(f"Defect", height=5).set_placement(new_rectangle[0], align=TextEntityAlignment.BOTTOM_LEFT)
+            red = random.randint(0, 255)
+            green = random.randint(0, 255)
+            blue = random.randint(0, 255)
+            defect.rgb = (red, green, blue)  # Set random color for the defect rectangle
+            defect_text.rgb = (red, green, blue)  # Set the same color for the text
+            existing_rectangles.add(new_rectangle)  # Add to the set of existing rectangles
+            print(f"Added new rectangle: {new_rectangle}")
+        else:
+            print(f"Skipped rectangle (too close or already exists): {new_rectangle}")
+
+    # Save the updated DXF file
+    doc.saveas(output_path)
+    print(f"DXF file updated and saved to: {output_path}")
+
+def detect_fabric_start_end(video_path):
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"Error: Could not open video file: {video_path}")
+        return
+
+    # Initialize background subtractor
+    back_sub = cv2.createBackgroundSubtractorMOG2(history=600, varThreshold=30, detectShadows=False)
+
+    fabric_start_frame = None
+    fabric_end_frame = None
+    frame_count = 0
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("End of video or error reading frame.")
+            break
+
+        frame_count += 1
+
+        # Apply background subtraction
+        fg_mask = back_sub.apply(frame)
+
+        # Threshold the mask to remove noise
+        _, binary_mask = cv2.threshold(fg_mask, 200, 255, cv2.THRESH_BINARY)
+
+        # Find contours in the binary mask
+        contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Get video width and height
+        video_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        video_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        
+        # Draw a vertical line in the middle of the frame from top to bottom
+        cv2.line(frame, (int(video_width / 2), 0), (int(video_width / 2), video_height), (0, 255, 0), 3)
+
+        # Check if any contour is large enough to be considered fabric
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > 5000:  # Adjust this threshold based on your fabric size
+                x, y, w, h = cv2.boundingRect(contour)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+                # Record the start frame
+                if fabric_start_frame is None:
+                    fabric_start_frame = frame_count
+
+                # Update the end frame
+                fabric_end_frame = frame_count
+
+        # Display the frame with detected fabric
+        cv2.imshow("Fabric Detection", frame)
+
+        # Break the loop if 'q' is pressed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
+    cv2.destroyAllWindows()
+
+    # Print the results
+    if fabric_start_frame is not None and fabric_end_frame is not None:
+        start_time = fabric_start_frame / fps
+        end_time = fabric_end_frame / fps
+        print(f"Fabric starts at: {start_time:.2f} seconds")
+        print(f"Fabric ends at: {end_time:.2f} seconds")
+    else:
+        print("No fabric detected in the video.")
 #---------------------------------------------------
 
 
